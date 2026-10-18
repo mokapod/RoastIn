@@ -42,6 +42,11 @@ Requires a running HQPlayer Desktop instance, since the library and all playback
 - When not on localhost, every API request needs an `X-API-Token` header. The token lives in `.api_token` (auto-generated on first start, `chmod 600`, git-ignored — treat it like a password).
 - Waveform rendering needs `ffmpeg` (PATH-discoverable) and `numpy`; without them the app runs fine, just without waveforms.
 
+## Diagnostics
+
+- `ROASTIN_TIMING=1` logs every timed phase; without it, only phases exceeding their per-phase slow threshold print (`⚠️  SLOW`).
+- Startup validates `library.xml` and prints directory/track counts. On a malformed file (HQPlayer has been observed to write truncated UTF-8), the log names the byte offset and points at `scripts/repair-library.sh`.
+
 ## Configuration
 
 All settings live in `settings.json`:
@@ -53,4 +58,4 @@ All settings live in `settings.json`:
 
 - No third-party frontend dependencies — plain ES modules, served as-is.
 - Python backend uses only the standard library plus optional numpy.
-- `waveform_cache/` is regenerable output, not source.
+- `waveforms.sqlite3` (and its `-wal`/`-shm` companions) is regenerable output, not source.

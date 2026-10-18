@@ -8,6 +8,8 @@ decodes so a burst of requests can't stampede the CPU that is also
 running HQPlayer's DSP. Concurrent requests for the SAME file share one
 future rather than each spawning its own subprocess.
 """
+from __future__ import annotations
+
 import concurrent.futures
 import os
 import shutil
@@ -18,6 +20,12 @@ from .config import (
     WAVEFORM_SAMPLE_RATE,
     WAVEFORM_TARGET_POINTS,
 )
+from .types import WaveformResult
+
+if __debug__:
+    # numpy may be absent; the annotation below is a string under
+    # `from __future__ import annotations`, so no runtime import needed.
+    pass
 
 # --- dependency probing --------------------------------------------------
 FFMPEG_AVAILABLE = shutil.which('ffmpeg') is not None
@@ -50,7 +58,7 @@ _waveform_futures = {}
 _waveform_lock = threading.Lock()
 
 
-def _cache_module():
+def _cache_module():  # -> waveform_cache module; string annotation avoids import cost
     """Late import keeps sqlite setup lazy until the first cache use.
 
     Module imports remain side-effect free: importing waveform.py probes
@@ -61,7 +69,7 @@ def _cache_module():
     return waveform_cache
 
 
-def load_audio_samples(audio_path, target_sr):
+def load_audio_samples(audio_path: str, target_sr: int) -> "np.ndarray":
     """Decode any audio file to mono float32 at target_sr via ffmpeg."""
     cmd = [
         'ffmpeg', '-v', 'error',
@@ -74,9 +82,13 @@ def load_audio_samples(audio_path, target_sr):
     return np.frombuffer(raw, dtype=np.float32)
 
 
-def _compute_waveform_uncached(audio_path):
+def _compute_waveform_uncached(audio_path: str) -> WaveformResult:
     """The actual heavy lifting, separated for the executor."""
-    y = load_audio_samples(audio_path, WAVEFORM_SAMPLE_RATE)
+    from .timing import timed
+    # First compute of a track is the only user-visible waveform cost
+    # (~150-400 ms ffmpeg decode). Everything after is a cache hit.
+    with timed('waveform.compute', track=os.path.basename(audio_path)):
+        y = load_audio_samples(audio_path, WAVEFORM_SAMPLE_RATE)
     duration = float(len(y) / WAVEFORM_SAMPLE_RATE)
 
     n = len(y)
@@ -113,7 +125,7 @@ def _compute_waveform_uncached(audio_path):
     }
 
 
-def analyze_waveform(audio_path):
+def analyze_waveform(audio_path: str) -> WaveformResult:
     """Compute (and cache) a peak envelope for a track.
 
     Concurrent requests for the same file wait on a single shared future
@@ -134,7 +146,9 @@ def analyze_waveform(audio_path):
     key = hashlib.sha1(f'{audio_path}|{mtime}'.encode()).hexdigest()[:16]
 
     # Disk cache first — the common case after a track has been played.
-    cached = _cache_module().get_cached(key)
+    from .timing import timed
+    with timed('waveform.hit', track=os.path.basename(audio_path)):
+        cached = _cache_module().get_cached(key)
     if cached is not None:
         return cached
 
@@ -172,7 +186,7 @@ def analyze_waveform(audio_path):
     return result
 
 
-def prune_waveform_cache(max_age_days=90):
+def prune_waveform_cache(max_age_days: int = 90) -> int:
     """Delete waveform cache entries older than `max_age_days`.
 
     Same 90-day contract and same timestamp semantics as the flat era —
@@ -185,6 +199,6 @@ def prune_waveform_cache(max_age_days=90):
     return _cache_module().prune_cache(max_age_days)
 
 
-def cache_stats():
+def cache_stats() -> tuple[int, int]:
     """(entry count, peak bytes) for the startup log."""
     return _cache_module().stats()

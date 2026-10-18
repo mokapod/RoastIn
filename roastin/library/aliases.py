@@ -16,11 +16,15 @@ preserves every top-level key it does not manage — audit_names.py
 writes a `_misses` block into the same file, and that must survive a
 merge.
 """
+from __future__ import annotations
+
 import json
 import os
 import threading
+from typing import Any, Callable, Dict, List
 
 from ..config import ALIASES_PATH
+from ..types import JSONValue
 
 # One lock for the read-modify-write cycle that a merge performs.
 # Read-only paths do not take it: save_aliases writes via os.replace,
@@ -29,7 +33,7 @@ from ..config import ALIASES_PATH
 _aliases_lock = threading.Lock()
 
 
-def load_aliases():
+def load_aliases() -> tuple[Dict[str, List[str]], Dict[str, List[str]]]:
     """Return (artist_aliases, composer_aliases), or empty dicts on error."""
     if not ALIASES_PATH.exists():
         return {}, {}
@@ -45,7 +49,9 @@ def load_aliases():
     )
 
 
-def load_aliases_strict():
+def load_aliases_strict() -> tuple[Dict[str, JSONValue],
+                                   Dict[str, List[str]],
+                                   Dict[str, List[str]]]:
     """Load aliases.json for the write path, raising on any error.
 
     Returns (base_data, artist_aliases, composer_aliases):
@@ -98,7 +104,9 @@ def load_aliases_strict():
     )
 
 
-def save_aliases(artist_aliases, composer_aliases, base_data):
+def save_aliases(artist_aliases: Dict[str, List[str]],
+                 composer_aliases: Dict[str, List[str]],
+                 base_data: Dict[str, JSONValue]) -> None:
     """Write aliases.json atomically, preserving other top-level keys.
 
     `base_data` is the full parsed document previously returned by
@@ -142,7 +150,8 @@ def save_aliases(artist_aliases, composer_aliases, base_data):
     os.replace(tmp, ALIASES_PATH)
 
 
-def merge_alias(field, target, source, on_change):
+def merge_alias(field: str, target: str, source: str,
+                on_change: Callable[[], None]) -> Dict[str, Any]:
     """Merge `source` into `target` in aliases.json.
 
     field:  'artist' or 'composer'

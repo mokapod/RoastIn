@@ -5,6 +5,8 @@ client: /api/load, /api/queue-append, /api/waveform, /api/reveal, and
 the /files/ cover-art route. Every one of them resolves the path and
 checks it against COVER_ROOTS before touching disk or HQPlayer.
 """
+from __future__ import annotations
+
 import os
 import sys
 from urllib.parse import unquote
@@ -12,7 +14,7 @@ from urllib.parse import unquote
 from .config import COVER_ROOTS, ROOT
 
 
-def normalize_path(raw_path):
+def normalize_path(raw_path: str | None) -> str:
     """Convert a file:// URL from the frontend into a clean filesystem path."""
     path = raw_path or ''
     path = path.removeprefix('file://')
@@ -25,7 +27,7 @@ def normalize_path(raw_path):
     return path
 
 
-def is_within_allowed_roots(path):
+def is_within_allowed_roots(path: str) -> bool:
     """True if the real path resolves inside any allowed root.
 
     Uses COVER_ROOTS rather than ROOT alone. COVER_ROOTS starts as

@@ -176,6 +176,17 @@ def handle_load(handler):
     seek_to = int(data.get('seek_to', 0) or 0)
     mode = data.get('mode', 'album')
 
+    # A load is the slowest interactive operation: PlaylistClear +
+    # upload + a deliberate 0.5 s registration sleep + the transport
+    # commands. The threshold is set above that sum so a warning means
+    # HQPlayer actually stalled rather than the sequence running.
+    from ..timing import timed
+    with timed('load', tracks=len(tracks), mode=mode):
+        _load_impl(handler, tracks, start_track, seek_to, mode)
+
+
+def _load_impl(handler, tracks, start_track, seek_to, mode):
+
     # Default to the requested mode. Overwritten below once the
     # multi-directory heuristic has run, so the response always
     # reports what actually happened rather than what was asked for.

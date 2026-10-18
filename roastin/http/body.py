@@ -4,12 +4,16 @@ Every /api/* POST takes a small JSON object. These helpers normalise the
 awkward corners: a missing Content-Length, a JSON null where a number
 was expected, a non-object body, an absurdly large declared length.
 """
+from __future__ import annotations
+
 import json
+from typing import Dict, Optional
 
 from ..config import MAX_JSON_BODY_BYTES
+from ..types import JSONValue
 
 
-def read_json_body(handler):
+def read_json_body(handler) -> Dict[str, JSONValue]:
     """Read and parse the JSON body of a POST request.
 
     The body is capped at MAX_JSON_BODY_BYTES. Without a cap, a client
@@ -53,7 +57,8 @@ def read_json_body(handler):
     return result
 
 
-def get_int(data, key, default=None):
+def get_int(data: Dict[str, JSONValue], key: str,
+            default: Optional[int] = None) -> int:
     """Fetch an integer from a parsed JSON body.
 
     json.loads produces None for a JSON null, and the two-argument
@@ -77,7 +82,8 @@ def get_int(data, key, default=None):
         raise ValueError(f"Invalid '{key}': expected an integer") from e
 
 
-def get_float(data, key, default=None):
+def get_float(data: Dict[str, JSONValue], key: str,
+              default: Optional[float] = None) -> float:
     """Same contract as get_int, for floating-point fields."""
     value = data.get(key, default)
     if value is None:

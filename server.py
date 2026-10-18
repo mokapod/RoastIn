@@ -27,6 +27,7 @@ from roastin import waveform_cache
 from roastin.http.broker import Broker
 from roastin.http.handler import Handler, ThreadingHTTPServer
 from roastin.hqplayer.status import get_native_status
+from roastin.library.check import check_library, report_to_log
 
 
 def main():
@@ -51,6 +52,8 @@ def main():
         print(f'   ⚠️  {skipped} legacy waveform cache file(s) skipped')
 
     print(f'   Favorites: {FAVORITES_PATH}')
+    report_to_log(check_library())
+
     token_desc = '<env>' if os.environ.get('ROASTIN_API_TOKEN') \
         else '<repo>/.api_token'
     print(f'   API token: {token_desc}')

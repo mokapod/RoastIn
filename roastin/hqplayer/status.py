@@ -6,12 +6,15 @@ be wasteful — get_volume_availability() caches by mtime instead.
 All mutable state lives in `roastin.state`, which this module imports
 without creating a cycle.
 """
+from __future__ import annotations
+
 import os
 import socket
 import xml.etree.ElementTree as ET
 
 from .. import state
 from ..config import HQPLAYER_HOST, HQPLAYER_PORT, HQPLAYER_SETTINGS_PATH
+from ..types import StatusPayload
 from .breaker import hqplayer_breaker
 
 
@@ -20,7 +23,7 @@ HQPLAYER_UNAVAILABLE = {
     'hqplayer_running': False,
 }
 
-def get_volume_availability():
+def get_volume_availability() -> tuple[bool, str]:
     """Return (available, reason) based on the engine node in settings.xml.
 
     Cached by mtime. Falls back to (True, '') if the file is missing or
@@ -70,11 +73,11 @@ def get_volume_availability():
         return available, reason
 
 
-def parse_status_element(elem):
+def parse_status_element(elem: ET.Element) -> StatusPayload:
     """Extract status data from a parsed <Status> XML element."""
     volume_available, volume_disabled_reason = get_volume_availability()
 
-    status_data = {
+    status_data: StatusPayload = {
         'state': {0: 'stopped', 1: 'paused', 2: 'playing'}.get(
             int(elem.get('state') or 0), 'stopped'
         ),
@@ -94,7 +97,11 @@ def parse_status_element(elem):
     }
     metadata = elem.find('metadata')
     if metadata is not None:
-        status_data.update(metadata.attrib)
+        # metadata.attrib is Dict[str, str]; every key it can carry is
+        # declared on StatusPayload, but the checker cannot prove that,
+        # so the merge goes through a plain dict first.
+        extra: dict = dict(metadata.attrib)
+        status_data.update(extra)  # type: ignore[typeddict-item]
         if 'samplerate' in status_data:
             status_data['samplerate'] = int(status_data['samplerate'])
         if 'sdm' in status_data:
@@ -110,7 +117,7 @@ def parse_status_element(elem):
     return status_data
 
 
-def _unreachable():
+def _unreachable() -> StatusPayload:
     """The dead-upstream payload, shared by real failures and fail-fast.
 
     Identical shape either way: the UI cannot distinguish "HQPlayer
@@ -127,7 +134,7 @@ def _unreachable():
     return dict(HQPLAYER_UNAVAILABLE)
 
 
-def get_native_status():
+def get_native_status() -> StatusPayload:
     """Query HQPlayer's XML API. Returns a status dict.
 
     Fail-fast: when the breaker is open (a recent failure), this returns
@@ -143,10 +150,19 @@ def get_native_status():
     impossible without a restart.
     """
     from .queue import sync_queue_cache_with_status
+    from ..timing import timed
 
     if not hqplayer_breaker.allow():
         return _unreachable()
 
+    # Measured normal on this machine: ~296 ms, dominated by HQPlayer's
+    # own reply time. The 600 ms threshold is deliberately above that —
+    # a warning here means HQPlayer got slower, not that the poll runs.
+    with timed('status.poll'):
+        return _poll_status(sync_queue_cache_with_status)
+
+
+def _poll_status(sync_queue_cache_with_status) -> StatusPayload:
     verdict_recorded = False
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:

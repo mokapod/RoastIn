@@ -18,24 +18,27 @@ Invalidation sources:
   * Explicit calls from every queue-mutating endpoint.
   * sync_queue_cache_with_status, run on every status poll.
 """
+from __future__ import annotations
+
 import socket
 import time
 import xml.etree.ElementTree as ET
 
 from .. import state
 from ..config import HQPLAYER_HOST, HQPLAYER_PORT
+from ..types import StatusPayload, TrackInfo
 from .breaker import hqplayer_breaker
 from .client import _XML_TIMING_ENABLED
 
 
-def invalidate_queue_cache():
+def invalidate_queue_cache() -> None:
     """Drop the cached queue. Safe to call when no cache exists."""
     with state.queue_cache_lock:
         state.queue_cache = None
         state.queue_cache_total = -1
 
 
-def sync_queue_cache_with_status(status_data):
+def sync_queue_cache_with_status(status_data: StatusPayload) -> None:
     """Drop the cache if HQPlayer reports a different queue length.
 
     Called on every successful status poll. The comparison is one
@@ -49,7 +52,9 @@ def sync_queue_cache_with_status(status_data):
             state.queue_cache_total = -1
 
 
-def query_playlistget_lean(timeout=30, idle_timeout=1.0):
+def query_playlistget_lean(timeout: float = 30,
+                           idle_timeout: float = 1.0
+                           ) -> tuple[list[TrackInfo], bool]:
     """Fetch HQPlayer's queue without holding the cover art in memory.
 
     Streams the reply through an XMLPullParser. Each PlaylistItem's
@@ -86,7 +91,10 @@ def query_playlistget_lean(timeout=30, idle_timeout=1.0):
     if not hqplayer_breaker.allow():
         raise ConnectionError('HQPlayer unavailable (circuit open)')
 
-    tracks = []
+    from ..timing import record
+    fetch_start = time.perf_counter()
+
+    tracks: list[TrackInfo] = []
     complete = False
     timing = _XML_TIMING_ENABLED
     t0 = time.perf_counter() if timing else 0.0
@@ -94,78 +102,84 @@ def query_playlistget_lean(timeout=30, idle_timeout=1.0):
 
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            # Each individual recv blocks for at most idle_timeout
-            # seconds. The loop distinguishes "silence after we've
-            # received something" (done) from "silence before we've
-            # received anything" (still waiting).
-            sock.settimeout(idle_timeout)
-            sock.connect((HQPLAYER_HOST, HQPLAYER_PORT))
-            sock.sendall(
-                b'<?xml version="1.0" encoding="utf-8"?><PlaylistGet/>\n')
+                # Each individual recv blocks for at most idle_timeout
+                # seconds. The loop distinguishes "silence after we've
+                # received something" (done) from "silence before we've
+                # received anything" (still waiting).
+                sock.settimeout(idle_timeout)
+                sock.connect((HQPLAYER_HOST, HQPLAYER_PORT))
+                sock.sendall(
+                    b'<?xml version="1.0" encoding="utf-8"?><PlaylistGet/>\n')
 
-            parser = ET.XMLPullParser(['end'])
-            deadline = time.time() + timeout
+                parser = ET.XMLPullParser(['end'])
+                deadline = time.time() + timeout
 
-            while True:
-                if time.time() >= deadline:
-                    print(f'[queue] PlaylistGet timed out after {timeout}s '
-                          f'({total_bytes:,} bytes, {len(tracks)} items)')
-                    break
-
-                try:
-                    chunk = sock.recv(65536)
-                except socket.timeout:
-                    # No data for idle_timeout seconds.
-                    if total_bytes > 0:
-                        # The stream went quiet after delivering data.
-                        # HQPlayer is done; it just doesn't say so.
-                        complete = True
+                while True:
+                    if time.time() >= deadline:
+                        print(f'[queue] PlaylistGet timed out after {timeout}s '
+                              f'({total_bytes:,} bytes, {len(tracks)} items)')
                         break
-                    # Nothing has arrived yet. HQPlayer may still be
-                    # preparing the reply. Keep waiting until the
-                    # overall deadline.
-                    continue
 
-                if not chunk:
-                    # Socket closed cleanly. Rare with this server,
-                    # but handled for completeness.
-                    complete = True
-                    break
-
-                total_bytes += len(chunk)
-                parser.feed(chunk)
-
-                for event, elem in parser.read_events():
-                    if event != 'end':
+                    try:
+                        chunk = sock.recv(65536)
+                    except socket.timeout:
+                        # No data for idle_timeout seconds.
+                        if total_bytes > 0:
+                            # The stream went quiet after delivering data.
+                            # HQPlayer is done; it just doesn't say so.
+                            complete = True
+                            break
+                        # Nothing has arrived yet. HQPlayer may still be
+                        # preparing the reply. Keep waiting until the
+                        # overall deadline.
                         continue
 
-                    if elem.tag == 'PlaylistItem':
-                        tracks.append({
-                            'uri': elem.get('uri', ''),
-                            'song': elem.get('song', ''),
-                            'artist': elem.get('artist', ''),
-                            'album': elem.get('album', ''),
-                            'length': elem.get('length', ''),
-                        })
-                        elem.clear()
-
-                    elif elem.tag == 'PlaylistGet':
-                        # Root end tag. Present for small replies,
-                        # apparently absent for large ones. Taking it
-                        # as a definitive signal when it appears saves
-                        # the 2-second idle wait.
+                    if not chunk:
+                        # Socket closed cleanly. Rare with this server,
+                        # but handled for completeness.
                         complete = True
+                        break
 
-                if complete:
-                    # Root end tag arrived in this chunk, or the
-                    # socket closed mid-chunk. Either way the reply
-                    # is over and there is nothing to wait for.
-                    break
+                    total_bytes += len(chunk)
+                    parser.feed(chunk)
+
+                    for event, elem in parser.read_events():
+                        if event != 'end':
+                            continue
+
+                        if elem.tag == 'PlaylistItem':
+                            tracks.append({
+                                'uri': elem.get('uri', ''),
+                                'song': elem.get('song', ''),
+                                'artist': elem.get('artist', ''),
+                                'album': elem.get('album', ''),
+                                'length': elem.get('length', ''),
+                            })
+                            elem.clear()
+
+                        elif elem.tag == 'PlaylistGet':
+                            # Root end tag. Present for small replies,
+                            # apparently absent for large ones. Taking it
+                            # as a definitive signal when it appears saves
+                            # the 2-second idle wait.
+                            complete = True
+
+                    if complete:
+                        # Root end tag arrived in this chunk, or the
+                        # socket closed mid-chunk. Either way the reply
+                        # is over and there is nothing to wait for.
+                        break
 
     except Exception as e:
         print(f'[queue] PlaylistGet failed: {e}')
         hqplayer_breaker.failure()
         raise ConnectionError('Failed to communicate with HQPlayer') from e
+    finally:
+        # Measured normal: a few hundred ms empty, 2-4 s with cover art.
+        # The threshold sits above the cover case, so a warning means the
+        # queue grew or HQPlayer's reply path degraded.
+        record('queue.fetch', (time.perf_counter() - fetch_start) * 1000,
+               items=len(tracks), kb=f'{total_bytes // 1024}')
 
     if timing:
         elapsed_ms = (time.perf_counter() - t0) * 1000
@@ -176,7 +190,7 @@ def query_playlistget_lean(timeout=30, idle_timeout=1.0):
     return tracks, complete
 
 
-def get_queue_cached(tracks_total):
+def get_queue_cached(tracks_total: int) -> list[TrackInfo]:
     """Return HQPlayer's queue, using the cache when possible.
 
     A cache hit is an integer comparison under the lock — no socket,
