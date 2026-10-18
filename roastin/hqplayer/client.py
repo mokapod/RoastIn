@@ -19,8 +19,19 @@ import socket
 import time
 
 from ..config import HQPLAYER_HOST, HQPLAYER_PORT
+from .breaker import hqplayer_breaker
 
 _XML_TIMING_ENABLED = os.environ.get('ROASTIN_XML_TIMING') == '1'
+
+
+def _require_reachable():
+    """Fail fast when the breaker says HQPlayer isn't answering.
+
+    Raises the same ConnectionError a real failure would, so the HTTP
+    layer maps it identically — only the latency differs.
+    """
+    if not hqplayer_breaker.allow():
+        raise ConnectionError('HQPlayer unavailable (circuit open)')
 
 
 def send_xml_command(xml_string):
@@ -46,6 +57,8 @@ def send_xml_command(xml_string):
     timing = _XML_TIMING_ENABLED
     t0 = time.perf_counter() if timing else 0.0
 
+    _require_reachable()
+
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.settimeout(2)
@@ -60,7 +73,19 @@ def send_xml_command(xml_string):
 
             try:
                 sock.recv(4096)
+                # A reply means HQPlayer is answering. Handshaking alone
+                # proves nothing — a hung HQPlayer accepts and then says
+                # nothing, which would leave the breaker stuck closed.
+                hqplayer_breaker.success()
             except socket.timeout:
+                # Deliberately NOT a failure(). A healthy HQPlayer can
+                # take longer than 2 s to acknowledge a command, so a
+                # timeout here is not evidence of a dead upstream, and
+                # counting it would open the breaker against a working
+                # server. Health is sampled by get_native_status, which
+                # is polled every second and treats its timeout as
+                # failure — that path opens the breaker within one poll
+                # interval and this command path then fails fast.
                 pass
             t3 = time.perf_counter() if timing else 0.0
 
@@ -72,6 +97,7 @@ def send_xml_command(xml_string):
                   f'cmd={xml_string[:50]}')
     except Exception as e:
         print(f'XML Command failed: {e}')
+        hqplayer_breaker.failure()
         raise ConnectionError('Failed to communicate with HQPlayer') from e
 
 
@@ -104,6 +130,10 @@ def send_xml_commands_pipelined(xml_strings, idle_timeout=0.5):
         for xml_string in xml_strings:
             send_xml_command(xml_string)
         return
+
+    # The N=1 case delegates above, so its breaker logic applies.
+    # For N≥2 this function opens its own socket — gate that here.
+    _require_reachable()
 
     timing = _XML_TIMING_ENABLED
     t_start = time.perf_counter() if timing else 0.0
@@ -160,4 +190,5 @@ def send_xml_commands_pipelined(xml_strings, idle_timeout=0.5):
 
     except Exception as e:
         print(f'XML pipelined commands failed: {e}')
+        hqplayer_breaker.failure()
         raise ConnectionError('Failed to communicate with HQPlayer') from e

@@ -12,7 +12,13 @@ import xml.etree.ElementTree as ET
 
 from .. import state
 from ..config import HQPLAYER_HOST, HQPLAYER_PORT, HQPLAYER_SETTINGS_PATH
+from .breaker import hqplayer_breaker
 
+
+HQPLAYER_UNAVAILABLE = {
+    'error': 'HQPlayer unavailable',
+    'hqplayer_running': False,
+}
 
 def get_volume_availability():
     """Return (available, reason) based on the engine node in settings.xml.
@@ -104,10 +110,44 @@ def parse_status_element(elem):
     return status_data
 
 
+def _unreachable():
+    """The dead-upstream payload, shared by real failures and fail-fast.
+
+    Identical shape either way: the UI cannot distinguish "HQPlayer
+    didn't answer" from "we didn't ask because it just didn't answer".
+    Only the latency differs (2 s vs microseconds).
+    """
+    if state.last_known_status:
+        cached = dict(state.last_known_status)
+        cached['state'] = 'stopped'
+        cached['position'] = 0
+        cached['hqplayer_running'] = False
+        cached['transport_loaded'] = False
+        return cached
+    return dict(HQPLAYER_UNAVAILABLE)
+
+
 def get_native_status():
-    """Query HQPlayer's XML API. Returns a status dict."""
+    """Query HQPlayer's XML API. Returns a status dict.
+
+    Fail-fast: when the breaker is open (a recent failure), this returns
+    immediately instead of waiting out the 2 s socket timeout. Measured
+    cost of one attempt against a hung upstream: 2.03 s and one thread
+    for the whole wait. Under the breaker, the first failure still pays
+    it, everything in the cooldown window costs microseconds, and one
+    probe per window checks for recovery.
+
+    Every exit records a verdict (success/failure) or releases the probe
+    slot. A probe whose slot leaks would wedge the breaker open forever
+    — no future probe would ever be admitted and recovery would be
+    impossible without a restart.
+    """
     from .queue import sync_queue_cache_with_status
 
+    if not hqplayer_breaker.allow():
+        return _unreachable()
+
+    verdict_recorded = False
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.settimeout(2)
@@ -122,6 +162,14 @@ def get_native_status():
                 if not chunk:
                     break
 
+                # First byte back is the real health signal. A hung
+                # HQPlayer still completes the TCP handshake (the kernel
+                # accepts into the listen backlog) and then goes silent —
+                # so `connect()` succeeding proves nothing. Measured:
+                # the blackhole upstream accepts instantly and then never
+                # replies, which is exactly the failure this guards.
+                hqplayer_breaker.success()
+                verdict_recorded = True
                 try:
                     parser.feed(chunk)
                 except ET.ParseError:
@@ -158,14 +206,19 @@ def get_native_status():
                     'hqplayer_running': False}
 
     except OSError:
-        if state.last_known_status:
-            cached = dict(state.last_known_status)
-            cached['state'] = 'stopped'
-            cached['position'] = 0
-            cached['hqplayer_running'] = False
-            cached['transport_loaded'] = False
-            return cached
-        return {'error': 'Connection refused', 'hqplayer_running': False}
+        hqplayer_breaker.failure()
+        return _unreachable()
 
     except Exception as e:
+        # Local (non-socket) errors say nothing about HQPlayer's health,
+        # so no verdict — the finally below hands the probe slot back.
         return {'error': str(e), 'hqplayer_running': True}
+
+    finally:
+        # If we took a probe slot but exited without recording success or
+        # failure — e.g. the "no Status element" exit, which is neither:
+        # the socket closed cleanly with no data — hand the slot back.
+        # Without this, one such probe wedges the breaker open forever
+        # and recovery becomes impossible without a restart.
+        if not verdict_recorded:
+            hqplayer_breaker.release()

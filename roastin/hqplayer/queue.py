@@ -24,6 +24,7 @@ import xml.etree.ElementTree as ET
 
 from .. import state
 from ..config import HQPLAYER_HOST, HQPLAYER_PORT
+from .breaker import hqplayer_breaker
 from .client import _XML_TIMING_ENABLED
 
 
@@ -79,6 +80,12 @@ def query_playlistget_lean(timeout=30, idle_timeout=1.0):
     parameter remains as a ceiling for the case where HQPlayer is
     slower than expected or never starts replying at all.
     """
+    # Bound the queue fetch by the breaker as well. Against a hung
+    # upstream this would wait out the full 30 s deadline — longer than
+    # the status path's 2 s and the worst single wait in the system.
+    if not hqplayer_breaker.allow():
+        raise ConnectionError('HQPlayer unavailable (circuit open)')
+
     tracks = []
     complete = False
     timing = _XML_TIMING_ENABLED
@@ -157,6 +164,7 @@ def query_playlistget_lean(timeout=30, idle_timeout=1.0):
 
     except Exception as e:
         print(f'[queue] PlaylistGet failed: {e}')
+        hqplayer_breaker.failure()
         raise ConnectionError('Failed to communicate with HQPlayer') from e
 
     if timing:
