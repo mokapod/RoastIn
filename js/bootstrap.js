@@ -87,23 +87,32 @@ window.addEventListener('scroll', () => {
       $header.classList.toggle('is-scrolled', window.scrollY > 10);
     }
 
-    updateHeaderAlbumInfoVisibility();
     scrollScheduled = false;
   });
 }, { passive: true });
 
-function updateHeaderAlbumInfoVisibility() {
-  if (!$headerInfo || !$headerInfo.classList.contains('active')) return;
+// Detail-view header fade. Observes the on-page artist line and flips
+// the header opaque the moment it scrolls under the header — no
+// per-frame getBoundingClientRect, so scrolling the tracklist never
+// forces layout. Re-armed by the view code every time $detailArtist
+// changes; a null target just disconnects.
+let detailArtistObserver = null;
 
-  if ($detailArtist) {
-    const rect = $detailArtist.getBoundingClientRect();
-    const headerHeight = $header ? $header.offsetHeight : 0;
+function observeDetailArtist() {
+  if (detailArtistObserver) detailArtistObserver.disconnect();
+  detailArtistObserver = null;
+  if (!$detailArtist || !$headerInfo) return;
 
-    const shouldShow = rect.top <= headerHeight;
-
-    $headerInfo.classList.toggle('visible', shouldShow);
-		$header.classList.toggle('is-opaque', shouldShow);
-  }
+  const headerH = $header ? $header.offsetHeight : 48;
+  detailArtistObserver = new IntersectionObserver(
+    (entries) => {
+      const shouldShow = entries[0].boundingClientRect.top <= headerH;
+      $headerInfo.classList.toggle('visible', shouldShow);
+      $header.classList.toggle('is-opaque', shouldShow);
+    },
+    { rootMargin: `-${headerH}px 0px 0px 0px`, threshold: 1 }
+  );
+  detailArtistObserver.observe($detailArtist);
 }
 
 document.querySelectorAll('[title]').forEach(el => {

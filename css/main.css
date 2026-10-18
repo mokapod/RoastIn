@@ -173,10 +173,7 @@ header.is-grid #navForwardBtn {
   display: none;
 }
 
-/* The middle column fills the header and centres the stats within
-   it. The sort button, also a child of .header-middle, is taken out
-   of the flow by the absolute rule below, so it doesn't affect the
-   centring of what remains. */
+/* The middle column fills the header and centres the stats. */
 header.is-grid .header-middle {
   display: flex;
   align-items: center;
@@ -210,9 +207,10 @@ header.is-detail {
 }
 
 /* Fades in when the on-page title scrolls past the header's bottom
-   edge. The class is toggled by updateHeaderAlbumInfoVisibility in
-   bootstrap.js. Before it fires, the header is an invisible band;
-   after, it becomes an opaque strip with the album title centred. */
+   edge. Toggled by the IntersectionObserver in bootstrap.js
+   (observeDetailArtist, re-armed on every view switch). Before it
+   fires, the header is an invisible band; after, it becomes an
+   opaque strip with the album title centred. */
 header.is-detail.is-opaque {
   background: rgba(19, 16, 12, 0.85);
   backdrop-filter: blur(10px);
@@ -228,15 +226,13 @@ header.is-detail.is-opaque {
    line at any width. */
 header.is-detail .header-left,
 header.is-detail .header-right,
-header.is-detail .header-album-artist {
+header.is-detail .header-album-artist,
+header.is-detail .stats-bar {
   display: none;
 }
 
-/* With the flanking columns hidden in detail view, the middle item
-   would land in the first grid cell (left-aligned) rather than the
-   centre — a grid item falls into the first available track when
-   its siblings are display: none. A single centred flex row
-   restores the centring and drops the now-empty 1fr tracks. */
+/* With the flanking columns hidden, use one centred flex row for the
+   album title. */
 header.is-detail .header-inner {
   display: flex;
   justify-content: center;
@@ -462,15 +458,6 @@ header.is-queue {
 
 /* ── Stats ── */
 .stats-bar { display: flex; align-items: center; gap: 0.75rem; margin: 0; }
-
-/* Hidden by the view-switching code (showAlbumDetail, showQueueView).
-   A class rather than an inline style, because an inline
-   `display: none` would override the mobile media query in section
-   16 that hides the stats at narrow viewports — returning to the
-   grid on a phone would then show them. */
-.stats-bar.is-hidden {
-  display: none;
-}
 
 .stat { display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap; cursor: default; }
 .stat svg {

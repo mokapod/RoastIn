@@ -26,13 +26,9 @@ function showGridView() {
   $header.classList.remove('is-detail', 'is-opaque', 'is-queue');
   $header.classList.toggle('is-scrolled', savedScrollPosition > 10);
   $header.classList.add('is-grid');
-  // Class rather than an inline style. An inline display would
-  // override the mobile media query that hides the stats on narrow
-  // viewports, so returning to the grid on a phone would show them.
-  $stats.classList.remove('is-hidden');
-  $sortBtn.style.display = '';
   $headerInfo.classList.remove('active', 'visible');
   isDetailView = false;
+  observeDetailArtist();
   updateNavButtons();
   requestAnimationFrame(() => { window.scrollTo(0, savedScrollPosition); });
   updatePlaybackBarMode();
@@ -343,16 +339,12 @@ function showAlbumDetail(albumIndex, pushState = true, preserveScroll = false) {
 
   $gridView.style.display = 'none';
   $detailView.classList.add('active');
-  // Class rather than an inline style — same reasoning as the remove
-  // in showGridView. Keeps the mobile media query in control of
-  // whether the stats are visible at all.
-  $stats.classList.add('is-hidden');
-  $sortBtn.style.display = 'none';
 
   $headerTitle.textContent  = normalizeMusicalKey(album.baseName);
   $headerArtist.textContent = album.artist;
   $headerInfo.classList.remove('visible');
 	$headerInfo.classList.add('active');
+  observeDetailArtist();
 
   if (pushState) {
     window.scrollTo(0, 0);
@@ -425,9 +417,7 @@ function showQueueView() {
   $headerArtist.textContent = '';
   $headerInfo.classList.add('active', 'visible');
   $detailArtist = null;
-
-  $stats.classList.add('is-hidden');
-  $sortBtn.style.display = 'none';
+  observeDetailArtist();
 
   // Header is hidden in queue view. is-grid and is-scrolled are
   // still set so that if is-queue is ever removed without a view
