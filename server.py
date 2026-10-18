@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
-import os
+import concurrent.futures
+import hashlib
 import json
+import os
+import secrets
+import shutil
 import socket
 import subprocess
 import sys
-import time
-import shutil
-import hashlib
-import secrets
 import threading
-import concurrent.futures
+import time
 import traceback
 import xml.etree.ElementTree as ET
 from http.server import HTTPServer, SimpleHTTPRequestHandler
-from socketserver import ThreadingMixIn
-from urllib.parse import urlparse, unquote
-from xml.sax.saxutils import quoteattr, escape as xml_escape
 from pathlib import Path
-
+from socketserver import ThreadingMixIn
+from urllib.parse import unquote, urlparse
+from xml.sax.saxutils import escape as xml_escape
+from xml.sax.saxutils import quoteattr
 
 # ==========================================================================
 # SETTINGS
@@ -30,7 +30,7 @@ ALIASES_PATH  = SCRIPT_DIR / 'aliases.json'           # /RoastIn/aliases.json
 def _load_settings():
     if not SETTINGS_PATH.exists():
         print(f"❌ Settings file not found: {SETTINGS_PATH}")
-        print(f"   Create it before starting the server.")
+        print("   Create it before starting the server.")
         sys.exit(1)
 
     try:
@@ -295,6 +295,11 @@ FAVORITES_PATH         = APP_DIR / 'favorites.json'
 SCRIPTS_DIR            = APP_DIR / 'scripts'
 API_TOKEN_PATH         = APP_DIR / '.api_token'
 
+# Upper bound on any POST body. Every endpoint takes a small command
+# payload, so this is a guard against a hostile Content-Length rather
+# than a real limit on legitimate use.
+MAX_JSON_BODY_BYTES    = 1024 * 1024
+
 # Roots the /files/ route is allowed to serve from, and that every
 # path-accepting endpoint validates against. ROOT is already canonical
 # — realpath'd at definition above — so it needs no further processing
@@ -523,7 +528,7 @@ def send_xml_command(xml_string):
             sock.connect((HQPLAYER_HOST, HQPLAYER_PORT))
             t1 = time.perf_counter() if timing else 0.0
 
-            request = f'<?xml version="1.0" encoding="utf-8"?>{xml_string}\n'.encode('utf-8')
+            request = f'<?xml version="1.0" encoding="utf-8"?>{xml_string}\n'.encode()
             sock.sendall(request)
             t2 = time.perf_counter() if timing else 0.0
 
@@ -588,7 +593,9 @@ def send_xml_commands_pipelined(xml_strings, idle_timeout=0.5):
             # send buffer, so no sendall() blocks waiting for HQPlayer
             # to drain its input.
             for xml_string in xml_strings:
-                request = f'<?xml version="1.0" encoding="utf-8"?>{xml_string}\n'.encode('utf-8')
+                request = (
+                    f'<?xml version="1.0" encoding="utf-8"?>{xml_string}\n'
+                ).encode()
                 sock.sendall(request)
 
             t_sent = time.perf_counter() if timing else 0.0
@@ -844,8 +851,7 @@ def get_queue_cached(tracks_total):
 def normalize_path(raw_path):
     """Convert a file:// URL from the frontend into a clean filesystem path."""
     path = raw_path or ''
-    if path.startswith('file://'):
-        path = path[len('file://'):]
+    path = path.removeprefix('file://')
     path = unquote(path)
 
     if sys.platform == 'win32' and len(path) >= 3 and path[0] == '/' and path[2] == ':':
@@ -864,7 +870,15 @@ def build_m3u8(paths):
 
 
 def read_json_body(handler):
-    """Read and parse JSON body from a POST request."""
+    """Read and parse JSON body from a POST request.
+
+    The body is capped at MAX_JSON_BODY_BYTES. Without a cap, a client
+    that sends `Content-Length: 2147483647` makes `rfile.read(n)`
+    allocate toward that size before any validation runs — a single
+    request could exhaust the server's memory. Every request this
+    server accepts is a small command payload (a handful of track
+    paths, a script name), so 1 MB is orders of magnitude of headroom.
+    """
     content_length = handler.headers.get('Content-Length')
     if not content_length:
         return {}
@@ -874,16 +888,26 @@ def read_json_body(handler):
     except ValueError:
         return {}
 
+    if length < 0:
+        raise ValueError("Invalid Content-Length")
+    if length > MAX_JSON_BODY_BYTES:
+        raise ValueError(
+            f"Request body too large (limit {MAX_JSON_BODY_BYTES} bytes)"
+        )
+
     post_data = handler.rfile.read(length).decode('utf-8')
     if not post_data:
         return {}
 
     try:
         result = json.loads(post_data)
-    except json.JSONDecodeError:
-        raise ValueError("Invalid JSON payload")
+    except json.JSONDecodeError as e:
+        raise ValueError("Invalid JSON payload") from e
 
     if not isinstance(result, dict):
+        # ValueError rather than TypeError on purpose: do_POST maps
+        # ValueError to 400 and everything else to 500, and a non-object
+        # body is a client error.
         raise ValueError("JSON body must be an object")
 
     return result
@@ -909,8 +933,8 @@ def _get_int(data, key, default=None):
         raise ValueError(f"Missing '{key}'")
     try:
         return int(value)
-    except (TypeError, ValueError):
-        raise ValueError(f"Invalid '{key}': expected an integer")
+    except (TypeError, ValueError) as e:
+        raise ValueError(f"Invalid '{key}': expected an integer") from e
 
 
 def _get_float(data, key, default=None):
@@ -922,8 +946,8 @@ def _get_float(data, key, default=None):
         raise ValueError(f"Missing '{key}'")
     try:
         return float(value)
-    except (TypeError, ValueError):
-        raise ValueError(f"Invalid '{key}': expected a number")
+    except (TypeError, ValueError) as e:
+        raise ValueError(f"Invalid '{key}': expected a number") from e
 
 
 def _is_within_allowed_roots(path):
@@ -1025,7 +1049,7 @@ def _compute_waveform_uncached(audio_path):
 
     return {
         "duration": duration,
-        "points":   int(len(peaks_u8)),
+        "points":   len(peaks_u8),
         "data":     peaks_u8.tolist()
     }
 
@@ -1038,8 +1062,8 @@ def analyze_waveform(audio_path):
     """
     try:
         mtime = int(os.path.getmtime(audio_path))
-    except OSError:
-        raise FileNotFoundError(audio_path)
+    except OSError as e:
+        raise FileNotFoundError(audio_path) from e
 
     key = hashlib.sha1(f"{audio_path}|{mtime}".encode()).hexdigest()[:16]
     cache_file = os.path.join(WAVEFORM_CACHE_DIR, f"{key}.json")
@@ -1207,8 +1231,12 @@ def get_volume_availability():
                     available, reason = False, 'DirectSDM'
                 elif engine.get('volume_fixed', '0') == '1':
                     available, reason = False, 'Fixed volume'
-        except Exception:
-            pass
+        except Exception as e:
+            # A malformed or unreadable settings.xml must not disable
+            # the volume controls — fall through with the safe default
+            # and report why, once per mtime change.
+            print(f"[status] could not read engine node from "
+                  f"{HQPLAYER_SETTINGS_PATH}: {e}")
 
         # Single-name rebinding — atomic from the reader's point of
         # view. A reader that grabs `cached` at the top of a later call
@@ -1222,7 +1250,9 @@ def parse_status_element(elem):
     volume_available, volume_disabled_reason = get_volume_availability()
 
     status_data = {
-        'state': {0: 'stopped', 1: 'paused', 2: 'playing'}.get(int(elem.get('state') or 0), 'stopped'),
+        'state': {0: 'stopped', 1: 'paused', 2: 'playing'}.get(
+            int(elem.get('state') or 0), 'stopped'
+        ),
         'position': float(elem.get('position') or 0),
         'length': float(elem.get('length') or 0),
         'track': int(elem.get('track') or 1),
@@ -1278,7 +1308,7 @@ def get_native_status():
                 except ET.ParseError:
                     return {'error': 'Malformed XML response', 'hqplayer_running': True}
 
-                for event, elem in parser.read_events():
+                for _event, elem in parser.read_events():
                     if elem.tag == 'Status':
                         result = parse_status_element(elem)
 
@@ -1308,7 +1338,7 @@ def get_native_status():
 
             return {'error': 'No Status element received', 'hqplayer_running': False}
 
-    except socket.error:
+    except OSError:
         if _last_known_status:
             cached = dict(_last_known_status)
             cached['state'] = 'stopped'
@@ -1363,6 +1393,15 @@ class Handler(SimpleHTTPRequestHandler):
             if os.path.commonpath([full, str(APP_DIR)]) != str(APP_DIR):
                 return os.devnull
         except ValueError:
+            return os.devnull
+
+        # Never serve dotfiles or dot-directories. APP_DIR is the repo
+        # root, so this is what keeps /.git/ — config, objects, and the
+        # full commit history — from being readable over HTTP. The app
+        # has no dotfiles it legitimately serves: .api_token and
+        # .gitignore are both server-side only.
+        parts = Path(full).relative_to(APP_DIR).parts
+        if any(part.startswith('.') for part in parts):
             return os.devnull
 
         return full
@@ -1849,10 +1888,11 @@ class Handler(SimpleHTTPRequestHandler):
             result = subprocess.run(
                 ['/bin/bash', script_path],
                 capture_output=True,
-                timeout=60
+                timeout=60,
+                check=False,
             )
-        except subprocess.TimeoutExpired:
-            raise ValueError("Script timed out after 60s")
+        except subprocess.TimeoutExpired as e:
+            raise ValueError("Script timed out after 60s") from e
 
         stdout = result.stdout.decode('utf-8', errors='replace').strip()
         stderr = result.stderr.decode('utf-8', errors='replace').strip()
@@ -1958,7 +1998,7 @@ class Handler(SimpleHTTPRequestHandler):
             if not _is_within_allowed_roots(p):
                 raise ValueError("Track path outside allowed roots")
 
-        unique_dirs = list(set(os.path.dirname(p) for p in paths))
+        unique_dirs = list({os.path.dirname(p) for p in paths})
 
         if start_track < 1 or start_track > len(paths):
             start_track = 1
@@ -2206,8 +2246,10 @@ class Handler(SimpleHTTPRequestHandler):
 
         if not _WAVEFORM_AVAILABLE:
             detail = []
-            if _FFMPEG_ERROR: detail.append(_FFMPEG_ERROR)
-            if _NUMPY_ERROR:  detail.append(f"numpy: {_NUMPY_ERROR}")
+            if _FFMPEG_ERROR:
+                detail.append(_FFMPEG_ERROR)
+            if _NUMPY_ERROR:
+                detail.append(f"numpy: {_NUMPY_ERROR}")
             msg = '; '.join(detail) or 'waveform backend unavailable'
             print(f"[waveform] 503 — {msg}")
             self.send_response(503)
@@ -2215,7 +2257,8 @@ class Handler(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps({
                 'error': msg,
-                'hint': 'Install ffmpeg (brew install ffmpeg) and numpy (pip3 install numpy)'
+                'hint': ('Install ffmpeg (brew install ffmpeg) '
+                         'and numpy (pip3 install numpy)')
             }).encode())
             return
 
@@ -2258,7 +2301,7 @@ if __name__ == '__main__':
     print(f"   Scripts:  {SCRIPTS_DIR}")
     print(f"   App root: {APP_DIR}")
     print(f"   Data root: {ROOT}")
-    print(f"   Allowed roots:")
+    print("   Allowed roots:")
     for r in COVER_ROOTS:
         print(f"     - {r}")
     print(f"   Waveform cache: {WAVEFORM_CACHE_DIR}")
@@ -2267,8 +2310,8 @@ if __name__ == '__main__':
 
     if HTTP_HOST not in ('127.0.0.1', 'localhost', '::1'):
         print(f"   ⚠️  Binding to {HTTP_HOST} — API is reachable on the network.")
-        print(f"   ⚠️  Requests require the X-API-Token header.")
-        print(f"   ⚠️  Do not commit .api_token; treat it like a password.")
+        print("   ⚠️  Requests require the X-API-Token header.")
+        print("   ⚠️  Do not commit .api_token; treat it like a password.")
 
     if HQPLAYER_SCRIPTS:
         print(f"   HQPlayer scripts: {', '.join(HQPLAYER_SCRIPTS.keys())}")
@@ -2281,8 +2324,8 @@ if __name__ == '__main__':
         print("   ⚠️  waveform endpoint will return 503 until both are installed")
 
     if _XML_TIMING_ENABLED:
-        print(f"   ⏱  XML timing enabled (ROASTIN_XML_TIMING=1)")
-        print(f"      Per-command timings will be printed to this log.")
+        print("   ⏱  XML timing enabled (ROASTIN_XML_TIMING=1)")
+        print("      Per-command timings will be printed to this log.")
 
     # Prune stale waveform cache entries off the critical path. The
     # scan is O(cache size) — one stat per file — and can block for
