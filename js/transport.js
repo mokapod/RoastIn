@@ -37,6 +37,28 @@ function getCurrentAlbumIndex() {
   return allAlbums.findIndex(a => a.folder === currentPlayback.album.folder);
 }
 
+// Abandon an optimistic play that HQPlayer never confirmed. The client
+// flips isPlaying=true before the command resolves so the transport
+// feels instant; when the audio device is missing, HQPlayer never
+// reports 'playing' and no transport frame is pushed to correct us, so
+// the bar would otherwise keep advancing under a failure notification.
+// `offset` still holds the position playback was resumed from — the
+// play path only advanced startTime — so re-anchoring there rewinds the
+// display to where the failed attempt began.
+function haltPlaybackDisplay() {
+  if (!currentPlayback.album) return;
+
+  currentPlayback.isPlaying = false;
+  anchorPosition(currentPlayback.offset, currentPlayback.duration);
+
+  const length = currentPlayback.duration || 0;
+  $progress.value = length > 0 ? (currentPlayback.offset / length) * 100 : 0;
+  setTimeDisplay($pbTimeCurMin, $pbTimeCurSec, currentPlayback.offset || 0);
+  updateSeekValueText(currentPlayback.offset || 0, length);
+  paintWaveform(true);
+  updatePlaybackUI();
+}
+
 async function verifyPlaybackStarted(targetTrackNumber) {
   const myToken = ++playbackVerifyToken;
   const deadline = Date.now() + 8000;
@@ -53,6 +75,11 @@ async function verifyPlaybackStarted(targetTrackNumber) {
     }
   }
 
+  // HQPlayer never confirmed sound within the window. Stop believing
+  // otherwise — without this the notification says playback failed
+  // while isPlaying stays true and the bar keeps advancing.
+  if (myToken !== playbackVerifyToken) return;
+  haltPlaybackDisplay();
   showNotification(PLAYBACK_FAIL_MSG, true);
 }
 
