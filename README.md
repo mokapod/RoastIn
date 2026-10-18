@@ -6,7 +6,7 @@ A web-based music library player that fronts HQPlayer, with waveform seek bars, 
 
 - **Library browser** — reads HQPlayer's own library (`~/.hqplayer/library.xml`) and serves it as a fast, searchable album/artist/composer view in the browser. RoastIn does not scan your music folders; whatever HQPlayer has indexed is what you see.
 - **HQPlayer control** — play, queue, transport, volume (dB-stepped), and HQPlayer Desktop lifecycle (restart, DirectSDM toggle) via HQPlayer's XML control protocol on its TCP control port (default `4321`).
-- **Waveform seek bars** — server-side waveform extraction with ffmpeg + numpy, rendered as playable waveform/bar visuals. Cached per-track in `waveform_cache/` (90-day auto-prune).
+- **Waveform seek bars** — server-side waveform extraction with ffmpeg + numpy, rendered as playable waveform/bar visuals. Peaks persist in a single SQLite database (`waveforms.sqlite3`), imported once from any legacy flat-file cache. Cached per-track (90-day prune).
 - **Artist aliases** — merge artist/composer name variants (`aliases.json`), so "Karl Böhm" and "Karl Boehm" stay one entity.
 - **Favorites** — pin albums (`favorites.json`).
 - **Keyboard hotkeys** — full keyboard control of playback and navigation.
@@ -24,6 +24,8 @@ scripts/           HQPlayer helper scripts + library maintenance utilities
 aliases.json       Artist/composer alias map (editable, served read-write)
 favorites.json     Pinned album IDs
 settings.json      Frontend + server configuration
+waveforms.sqlite3  Waveform peak cache (SQLite; created on first run,
+                   legacy waveform_cache/ entries imported automatically)
 ```
 
 ## Running

@@ -3,3 +3,6 @@
 __pycache__/
 *.pyc
 waveform_cache/
+waveforms.sqlite3
+waveforms.sqlite3-wal
+waveforms.sqlite3-shm

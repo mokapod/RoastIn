@@ -21,9 +21,9 @@ from roastin.config import (
     ROOT,
     SCRIPTS_DIR,
     SETTINGS_PATH,
-    WAVEFORM_CACHE_DIR,
 )
 from roastin import waveform
+from roastin import waveform_cache
 from roastin.http.broker import Broker
 from roastin.http.handler import Handler, ThreadingHTTPServer
 from roastin.hqplayer.status import get_native_status
@@ -39,7 +39,17 @@ def main():
     print('   Allowed roots:')
     for r in COVER_ROOTS:
         print(f'     - {r}')
-    print(f'   Waveform cache: {WAVEFORM_CACHE_DIR}')
+
+    # Migrate before request threads exist. The importer commits every
+    # row, verifies the committed count, and only then removes imported
+    # JSON files. An interrupted migration is therefore safely retried.
+    imported, skipped = waveform_cache.migrate_flat_cache()
+    entries, peak_bytes = waveform.cache_stats()
+    print(f'   Waveform cache: {waveform_cache.db_path()} '
+          f'({entries} entries, {peak_bytes / 1024:.0f} KiB peaks)')
+    if skipped:
+        print(f'   ⚠️  {skipped} legacy waveform cache file(s) skipped')
+
     print(f'   Favorites: {FAVORITES_PATH}')
     token_desc = '<env>' if os.environ.get('ROASTIN_API_TOKEN') \
         else '<repo>/.api_token'

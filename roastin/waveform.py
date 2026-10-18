@@ -9,16 +9,12 @@ running HQPlayer's DSP. Concurrent requests for the SAME file share one
 future rather than each spawning its own subprocess.
 """
 import concurrent.futures
-import hashlib
-import json
 import os
 import shutil
 import subprocess
 import threading
-import time
 
 from .config import (
-    WAVEFORM_CACHE_DIR,
     WAVEFORM_SAMPLE_RATE,
     WAVEFORM_TARGET_POINTS,
 )
@@ -52,6 +48,17 @@ _waveform_executor = concurrent.futures.ThreadPoolExecutor(
 # caller waits on the same future.
 _waveform_futures = {}
 _waveform_lock = threading.Lock()
+
+
+def _cache_module():
+    """Late import keeps sqlite setup lazy until the first cache use.
+
+    Module imports remain side-effect free: importing waveform.py probes
+    optional ffmpeg/numpy only; the DB opens when analyze/prune/stats
+    actually touch it.
+    """
+    from . import waveform_cache
+    return waveform_cache
 
 
 def load_audio_samples(audio_path, target_sr):
@@ -111,23 +118,25 @@ def analyze_waveform(audio_path):
 
     Concurrent requests for the same file wait on a single shared future
     rather than each spawning their own ffmpeg subprocess.
+
+    Persistence is one SQLite row per (path, mtime) key — see
+    roastin/waveform_cache.py for storage details. The in-process
+    future registry above it is unchanged: the DB removes the file
+    I/O bottleneck, not the duplicate-compute one.
     """
+    import hashlib
+
     try:
         mtime = int(os.path.getmtime(audio_path))
     except OSError as e:
         raise FileNotFoundError(audio_path) from e
 
     key = hashlib.sha1(f'{audio_path}|{mtime}'.encode()).hexdigest()[:16]
-    cache_file = os.path.join(WAVEFORM_CACHE_DIR, f'{key}.json')
 
     # Disk cache first — the common case after a track has been played.
-    if os.path.exists(cache_file):
-        try:
-            with open(cache_file, 'r') as f:
-                return json.load(f)
-        except (json.JSONDecodeError, OSError) as e:
-            print(f'[waveform] cache unreadable ({e}), recomputing '
-                  f'{os.path.basename(audio_path)}')
+    cached = _cache_module().get_cached(key)
+    if cached is not None:
+        return cached
 
     # Check-and-submit under a single lock hold. Releasing between the
     # check and the registration lets two threads both decide they're
@@ -157,48 +166,25 @@ def analyze_waveform(audio_path):
     # Only the submitting thread writes the disk cache, and only on
     # success. If future.result() raised, we never reach here.
     if is_computer:
-        tmp = cache_file + '.tmp'
-        with open(tmp, 'w') as f:
-            json.dump(result, f)
-        os.replace(tmp, cache_file)
+        _cache_module().put_cached(key, result['duration'],
+                                   result['points'], result['data'])
 
     return result
 
 
 def prune_waveform_cache(max_age_days=90):
-    """Delete waveform cache files whose track hasn't been played in
-    `max_age_days`.
+    """Delete waveform cache entries older than `max_age_days`.
 
-    Ages on mtime rather than atime. Entries are written once and never
-    rewritten, so an entry's mtime is the moment its track was last
-    played — replaying a track produces the same key from the same
-    source mtime, hits the existing cache file, and does not rewrite it.
-    atime would be the semantically correct field, but it is unreliable
-    in practice: most Linux filesystems default to relatime, which only
-    updates it after a 24-hour window, and noatime mounts don't maintain
-    it at all. A prune keyed on atime would either miss recent plays or
-    delete the whole cache on a filesystem that never updates it.
+    Same 90-day contract and same timestamp semantics as the flat era —
+    see roastin/waveform_cache.prune_cache for details. One indexed
+    DELETE now stands in for the old full-directory scan + per-file
+    stat.
 
-    The cache grows unbounded as the user plays more tracks. Each entry
-    is ~5 KB, so a 5,000-track library is ~25 MB — fine. At 50,000 it
-    starts to matter. Running the prune in a background thread shortly
-    after startup keeps it self-limiting without blocking the listener.
-
-    Returns the number of files removed.
+    Returns the number of entries removed.
     """
-    cutoff = time.time() - max_age_days * 86400
-    removed = 0
-    try:
-        for name in os.listdir(WAVEFORM_CACHE_DIR):
-            if not name.endswith('.json'):
-                continue
-            path = os.path.join(WAVEFORM_CACHE_DIR, name)
-            try:
-                if os.path.getmtime(path) < cutoff:
-                    os.remove(path)
-                    removed += 1
-            except OSError:
-                pass
-    except OSError:
-        pass
-    return removed
+    return _cache_module().prune_cache(max_age_days)
+
+
+def cache_stats():
+    """(entry count, peak bytes) for the startup log."""
+    return _cache_module().stats()
