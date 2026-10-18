@@ -18,43 +18,25 @@
 let lastProgressPercent    = -1;
 let lastShownVolumePercent = -1;
 
-// Polling gate. When the tab is hidden the loop stops scheduling
-// itself; when it becomes visible again, one fetch runs immediately
-// and the chain resumes. Without this, a background tab pings
-// HQPlayer's socket once per second forever, parsing XML and
-// touching the DOM for a UI nobody is looking at.
-let statusPollingActive = !document.hidden;
+// Transport state applied from a pushed frame. Frames are per-group:
+// 'transport' carries song/album/state/track/..., 'flags' carries
+// volume/random/repeat/..., and 'heartbeat' carries only position.
+// Each is merged into lastStatus (declared in state.js) and then the
+// whole thing is applied, so a flags-only frame still sees the current
+// transport fields.
 
-// Generation token for the polling loop. Every visibilitychange bumps
-// this; fetchStatus captures the current value at entry and only
-// reschedules itself if the generation still matches when its request
-// finishes.
-//
-// The bug this fixes: the previous design relied solely on
-// statusPollingActive to decide whether to reschedule. That works when
-// the tab hides and stays hidden (the in-flight loop sees false and
-// stops), and it works when the tab hides and shows after the loop has
-// already gone idle (the visibility handler starts a fresh chain and
-// there's no old one to collide with). It breaks when the tab hides
-// and shows *while a request is in flight*:
-//
-//   1. Visible. Loop A starts.
-//   2. Hidden.  statusPollingActive = false. Loop A's request still
-//               on the wire.
-//   3. Visible. statusPollingActive = true, visibility handler calls
-//               fetchStatus() → Loop B starts.
-//   4. Loop A's request resolves. finally sees statusPollingActive
-//               === true and schedules itself.
-//   5. Loop B's request resolves. finally also sees true, schedules.
-//   6. Two independent chains now run forever, each pinging HQPlayer
-//               once per second — double the sockets, double the XML
-//               parsing, double the DOM writes, permanently.
-//
-// The generation token makes the race impossible. Only one value of
-// statusPollGeneration is "current" at any moment; a loop whose
-// captured generation no longer matches that value has been superseded
-// and must not schedule another iteration.
-let statusPollGeneration = 0;
+// Live stream handle. Null until connected, and null again whenever the
+// tab is hidden or the connection drops.
+let statusStream = null;
+
+// Position anchor: the server's last reported position and when we
+// received it. Between heartbeats the UI coasts on its own clock, so a
+// 30 s heartbeat interval still yields a smoothly advancing bar.
+let positionAnchor = { position: 0, length: 0, at: 0 };
+
+// Generation token. Every (re)connect bumps this so a frame arriving
+// from a superseded connection cannot overwrite fresher state.
+let streamGeneration = 0;
 
 // Last queue position observed in queue mode. Used to detect track
 // changes in the queue, where data.track is a queue position rather
@@ -62,36 +44,165 @@ let statusPollGeneration = 0;
 // is only consulted when playbackMode === 'queue'.
 let lastSeenQueuePosition = null;
 
+/* ── Stream lifecycle ──
+   One EventSource per tab. The browser reconnects automatically on
+   drop (the server sends `retry: 2000`), so there is no manual retry
+   loop here. We only manage the two cases EventSource does not:
+   the tab going hidden (close it, stop the server thread) and coming
+   back (reopen and re-seed from the stream's initial frames). */
+
+function startStatusStream() {
+  if (statusStream || document.hidden) return;
+
+  const myGeneration = ++streamGeneration;
+
+  // EventSource cannot send headers, so the token rides in the query
+  // string. Same-origin, and the token is already in this page.
+  const url = `${API_BASE}/stream?token=${encodeURIComponent(API_TOKEN)}`;
+  const es = new EventSource(url);
+  statusStream = es;
+
+  const handle = (kind) => (event) => {
+    // Ignore frames from a connection we've already replaced.
+    if (myGeneration !== streamGeneration) return;
+    let payload;
+    try {
+      payload = JSON.parse(event.data);
+    } catch {
+      return;
+    }
+    applyFrame(kind, payload);
+  };
+
+  es.addEventListener('transport', handle('transport'));
+  es.addEventListener('flags', handle('flags'));
+  es.addEventListener('heartbeat', handle('heartbeat'));
+
+  es.onerror = () => {
+    // ReadyState CLOSED means the browser gave up (e.g. 401 after a
+    // token rotation). Stop and let the next visibility change or
+    // reload restart it; otherwise the browser handles reconnecting.
+    if (es.readyState === EventSource.CLOSED && myGeneration === streamGeneration) {
+      statusStream = null;
+      markDisconnected();
+    }
+  };
+}
+
+function stopStatusStream() {
+  if (!statusStream) return;
+  streamGeneration++;   // invalidate in-flight frames
+  statusStream.close();
+  statusStream = null;
+}
+
+/* Merge one frame into lastStatus, then apply. */
+function applyFrame(kind, payload) {
+  if (!lastStatus) lastStatus = {};
+
+  if (kind === 'heartbeat') {
+    // Position only — re-anchor the local clock, don't touch anything
+    // else. The bar and time text advance from this anchor.
+    positionAnchor = {
+      position: payload.position || 0,
+      length: payload.length || 0,
+      at: Date.now()
+    };
+    lastStatus.position = payload.position;
+    if (payload.length) lastStatus.length = payload.length;
+    tickPosition();
+    return;
+  }
+
+  Object.assign(lastStatus, payload);
+
+  if (kind === 'transport') {
+    positionAnchor = {
+      position: payload.position || 0,
+      length: payload.length || 0,
+      at: Date.now()
+    };
+  }
+
+  applyStatus(lastStatus);
+}
+
+/* Between heartbeats, advance the bar from the local anchor. Only runs
+   while something is playing, and stops at the track's end so the bar
+   doesn't run past the duration if a heartbeat is late. */
+function tickPosition() {
+  if (!currentPlayback.isPlaying || isDraggingProgress) return;
+  const length = positionAnchor.length || currentPlayback.duration || 0;
+  if (!length) return;
+
+  const elapsed = (Date.now() - positionAnchor.at) / 1000;
+  const pos = Math.min(positionAnchor.position + elapsed, length);
+
+  if (Date.now() - lastSeekTime > 1500) {
+    const percent = (pos / length) * 100;
+    if (Math.abs(lastProgressPercent - percent) > 0.5) {
+      $progress.value = percent;
+      lastProgressPercent = percent;
+    }
+    if (setTimeDisplay($pbTimeCurMin, $pbTimeCurSec, pos)) {
+      $pbTimeTot.textContent = formatTime(length);
+    }
+  }
+  paintWaveform();
+}
+
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
-    statusPollingActive = false;
-    // Invalidate any loop still in flight. Bumping on hide (rather
-    // than on show) expresses the intent directly: the moment the tab
-    // goes away, everything that was already running is stale, and
-    // whatever the visibility handler starts on return is the only
-    // loop that matters.
-    statusPollGeneration++;
-  } else if (!statusPollingActive) {
-    statusPollingActive = true;
-    fetchStatus();   // restart immediately; don't wait a full interval
+    // Closing the stream releases the server thread and stops the
+    // frames. The state we hold stays on screen, frozen, which is
+    // correct for a tab nobody is looking at.
+    stopStatusStream();
+  } else {
+    // Reopen. The stream seeds transport + flags + position on
+    // connect, so the frozen state corrects itself immediately.
+    startStatusStream();
   }
 });
 
+/* ── One-shot refresh ──
+   Kept for the paths that mutate state and want the UI updated
+   without waiting for the next pushed frame (album load, restore).
+   This is a plain GET, not a poll — nothing schedules it. */
 async function fetchStatus() {
-  // Capture the generation for this iteration. If a visibilitychange
-  // fires before the request resolves, the value here goes stale and
-  // the finally block below declines to reschedule — the handler's
-  // call to fetchStatus becomes the sole owner of the chain.
-  //
-  // This must be read before the first await so the capture happens
-  // on the same tick the loop iteration was launched, not after the
-  // request round-trip has already begun.
-  const myGeneration = statusPollGeneration;
-
   try {
     const res = await fetch(`${API_BASE}/status`);
     const data = await res.json();
+    lastStatus = data;
+    positionAnchor = {
+      position: data.position || 0,
+      length: data.length || 0,
+      at: Date.now()
+    };
+    applyStatus(data);
+  } catch (e) {
+    markDisconnected();
+  }
+}
 
+function markDisconnected() {
+  if ($pipeline) {
+    $pipeline.style.setProperty('--logo-color-main', '#6a5c4d');
+    $pipeline.style.setProperty('--logo-color-accent', '#6a5c4d');
+    $pipeline.style.setProperty('--logo-color-center', '#6a5c4d');
+    $pipeline.classList.add('disconnected');
+    $pipeline.classList.remove('idle');
+  }
+  if ($hqBtn && !isLaunchingHQPlayer) {
+    $hqBtn.classList.remove('launching');
+    $hqBtn.classList.add('disconnected');
+  }
+  if ($pbRight) $pbRight.classList.add('disconnected');
+  isLaunchingHQPlayer = false;
+}
+
+/* Apply one complete status snapshot to the UI. Called from the stream
+   (merged frames) and from the one-shot refresh. */
+function applyStatus(data) {
     // Reconcile the client's post-reorder belief with the server's
     // report. The drop handler sets pendingQueueTrack when a reorder
     // shifted the playing track's position; until the server confirms
@@ -418,43 +529,4 @@ async function fetchStatus() {
     // the underlying currentPlayback.album, if the server corrected
     // it) is reflected in the bar within a poll interval.
     updatePlaybackBarMode();
-  } catch (e) {
-    if ($pipeline) {
-      $pipeline.style.setProperty('--logo-color-main', '#6a5c4d');
-      $pipeline.style.setProperty('--logo-color-accent', '#6a5c4d');
-      $pipeline.style.setProperty('--logo-color-center', '#6a5c4d');
-      $pipeline.classList.add('disconnected');
-      $pipeline.classList.remove('idle');
-    }
-    if ($hqBtn && !isLaunchingHQPlayer) {
-      $hqBtn.classList.remove('launching');
-      $hqBtn.classList.add('disconnected');
-    }
-    if ($pbRight) $pbRight.classList.add('disconnected');
-
-    isLaunchingHQPlayer = false;
-  } finally {
-    // Reschedule only if this iteration is still the current one. Two
-    // independent conditions must both hold:
-    //
-    //   statusPollingActive — the tab is visible, so the loop should
-    //     run at all. When the tab is hidden, this is false and the
-    //     visibilitychange handler takes over responsibility for
-    //     restarting on return.
-    //
-    //   myGeneration === statusPollGeneration — no visibilitychange
-    //     has fired since this iteration began. If one has (tab hid
-    //     or showed mid-request), a newer fetchStatus call is either
-    //     running now or was scheduled by the handler, and this
-    //     iteration must not add a competing chain.
-    //
-    // The second condition is what prevents the double-up: without
-    // it, an iteration whose request spanned a hide/show cycle would
-    // reschedule alongside the handler's fresh call, producing two
-    // permanent polling loops. See the note on statusPollGeneration
-    // for the full sequence.
-    if (statusPollingActive && myGeneration === statusPollGeneration) {
-      setTimeout(fetchStatus, POLL_INTERVAL_MS);
-    }
-  }
 }

@@ -44,7 +44,7 @@ Requires a running HQPlayer Desktop instance, since the library and all playback
 
 All settings live in `settings.json`:
 
-- `frontend` — read by the browser, injected as `window.CONFIG`: polling interval, sort order, waveform style/colors, volume range and step.
+- `frontend` — read by the browser, injected as `window.CONFIG`: sort order, search debounce, notification duration, waveform style/colors, volume range and step.
 - `server` — read by the Python backend only, never sent to the browser: bind host/port, HQPlayer host/port and control port, `homePath` (where HQPlayer's `.hqplayer/library.xml` lives), `coverRoots` (extra roots art may be served from, e.g. an external volume), ffmpeg path, waveform cache dir and resolution.
 
 ## Notes

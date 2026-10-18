@@ -6,7 +6,6 @@
 
     "apiBase": "/api",
 
-    "pollIntervalMs": 1000,
     "defaultSort": "artist",
     "searchDebounceMs": 250,
     "notificationDurationMs": 3000,

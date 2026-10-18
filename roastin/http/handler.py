@@ -15,6 +15,7 @@ import json
 import os
 import shutil
 import threading
+import time
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from socketserver import ThreadingMixIn
 from urllib.parse import unquote, urlparse
@@ -44,12 +45,29 @@ from . import actions
 from .body import get_float, get_int, read_json_body
 from .static import resolve_static_path
 
+# A single SSE connection holds one server thread for its lifetime.
+# Cap it so a forgotten tab re-handshakes periodically instead of
+# pinning a thread forever; the client reconnects transparently.
+MAX_STREAM_SECONDS = 30 * 60
+
+# Comment-line keep-alive interval inside the stream. Only fires when
+# no real frame arrived — in practice the broker's heartbeat and
+# transport frames are the keep-alive. This line exists for the dead
+# client: writing to a closed socket is what raises the broken pipe
+# that ends the thread.
+PING_INTERVAL = 25.0
+
 
 class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
     daemon_threads = True
 
 
 class Handler(SimpleHTTPRequestHandler):
+    # The shared status broker, injected at startup by server.py.
+    # Class attribute (not instance): every handler thread reads the
+    # same broker without the server having to thread it through
+    # request dispatch.
+    _broker = None
     # ------------------------------------------------------------------
     # Immutable-ish file caches
     # ------------------------------------------------------------------
@@ -156,7 +174,20 @@ class Handler(SimpleHTTPRequestHandler):
     # GET routing
     # ------------------------------------------------------------------
     def do_GET(self):
-        path = urlparse(self.path).path
+        parsed = urlparse(self.path)
+        path = parsed.path
+
+        # SSE takes its token as a query parameter: EventSource cannot
+        # set request headers, so the X-API-Token mechanism the rest of
+        # the API uses is unavailable here. Same-origin only, and the
+        # token is already embedded in this page for the fetch patch, so
+        # this exposes it to nobody who could not already read it.
+        if path == '/api/stream':
+            if not self._is_stream_authorized(parsed.query):
+                self._unauthorized()
+                return
+            self._serve_stream()
+            return
 
         # Gate /api/* before any routing branch runs. Static assets
         # stay open — the browser needs them to load the app and read
@@ -172,6 +203,73 @@ class Handler(SimpleHTTPRequestHandler):
             super().do_GET()
         except (BrokenPipeError, ConnectionResetError, OSError):
             pass
+
+    def _is_stream_authorized(self, query):
+        """Token check for the SSE route, from ?token=."""
+        import secrets
+        from urllib.parse import parse_qs
+        provided = (parse_qs(query).get('token') or [''])[0]
+        if not provided:
+            return False
+        return secrets.compare_digest(provided, API_TOKEN)
+
+    def _serve_stream(self):
+        """Server-Sent Events: push status frames from the shared broker.
+
+        The connection is held open for up to MAX_STREAM_SECONDS, then
+        closed cleanly. EventSource reconnects automatically, so the
+        client sees no interruption — the cap exists so a forgotten tab
+        cannot pin a thread and a queue slot indefinitely.
+
+        Between frames, a comment line (`: ping`) goes out every
+        PING_INTERVAL seconds. It carries no data; its only job is to
+        make a dead client surface as a broken pipe so the thread exits
+        instead of blocking on a queue nobody drains.
+        """
+        import queue as queue_module
+        from .broker import format_sse
+
+        broker = self._broker
+        if broker is None:
+            # Only reachable if the entry point forgot to start it.
+            self._send_json({'error': 'status stream not available'},
+                            status=503)
+            return
+
+        q, seeds = broker.subscribe()
+        try:
+            # HTTP/1.0 + no Content-Length is the streaming idiom for
+            # this server: the client reads until close. Sending a
+            # length would make the browser wait for the whole body.
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/event-stream')
+            self.send_header('Cache-Control', 'no-cache')
+            self.send_header('X-Accel-Buffering', 'no')
+            self.end_headers()
+
+            # Tell the client how fast to retry if the stream drops.
+            self.wfile.write(b'retry: 2000\n\n')
+            self.wfile.flush()
+
+            for kind, payload in seeds:
+                self.wfile.write(format_sse(kind, payload).encode())
+            self.wfile.flush()
+
+            deadline = time.monotonic() + MAX_STREAM_SECONDS
+            while time.monotonic() < deadline:
+                try:
+                    kind, payload = q.get(timeout=PING_INTERVAL)
+                except queue_module.Empty:
+                    self.wfile.write(b': ping\n\n')
+                    self.wfile.flush()
+                    continue
+                self.wfile.write(format_sse(kind, payload).encode())
+                self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError, OSError):
+            # Client navigated away or the tab closed. Normal exit.
+            pass
+        finally:
+            broker.unsubscribe(q)
 
     def _route_get(self, path):
         """Handle one GET route. True if the request was answered."""

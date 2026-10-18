@@ -24,7 +24,9 @@ from roastin.config import (
     WAVEFORM_CACHE_DIR,
 )
 from roastin import waveform
+from roastin.http.broker import Broker
 from roastin.http.handler import Handler, ThreadingHTTPServer
+from roastin.hqplayer.status import get_native_status
 
 
 def main():
@@ -73,6 +75,13 @@ def main():
 
     threading.Thread(target=_background_prune, name='WaveformPrune',
                      daemon=True).start()
+
+    # One shared poller for every SSE client. Starts before the
+    # listener binds so the first subscriber gets seeded snapshots
+    # immediately instead of waiting one tick.
+    broker = Broker(get_native_status)
+    broker.start()
+    Handler._broker = broker
 
     server = ThreadingHTTPServer((HTTP_HOST, HTTP_PORT), Handler)
     try:

@@ -34,7 +34,6 @@ const ASSET_BASE       = CONFIG.assetBase;
 const API_BASE         = CONFIG.apiBase;
 const LIBRARY_URL      = CONFIG.libraryUrl;
 
-const POLL_INTERVAL_MS = CONFIG.pollIntervalMs;
 const DEFAULT_SORT     = CONFIG.defaultSort;
 const SEARCH_DEBOUNCE_MS       = CONFIG.searchDebounceMs;
 const NOTIFICATION_DURATION_MS = CONFIG.notificationDurationMs;

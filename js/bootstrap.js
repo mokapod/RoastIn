@@ -113,7 +113,8 @@ document.querySelectorAll('[title]').forEach(el => {
   el.removeAttribute('title');
 });
 
-// Start polling. The status response drives the playback bar, transport
-// indicators, and the queue view's playing highlight. Queue contents
-// are fetched on demand when the queue view opens.
-fetchStatus();
+// Open the status stream. Frames push transport changes, flag changes,
+// and a position heartbeat; nothing polls. The one-shot fetchStatus()
+// remains for mutations that want an immediate refresh. Queue contents
+// are still fetched on demand when the queue view opens.
+startStatusStream();
