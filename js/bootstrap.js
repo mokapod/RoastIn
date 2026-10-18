@@ -115,6 +115,12 @@ function observeDetailArtist() {
   detailArtistObserver.observe($detailArtist);
 }
 
+// The compact bar mode is width-dependent (≤768px). Re-evaluate it on
+// resize so crossing the breakpoint doesn't wait for the next status
+// frame. Cheap: the mode guard inside skips the repaint when the class
+// doesn't actually change.
+window.addEventListener('resize', updatePlaybackBarMode, { passive: true });
+
 document.querySelectorAll('[title]').forEach(el => {
   if (!el.hasAttribute('aria-label')) {
     el.setAttribute('aria-label', el.getAttribute('title'));

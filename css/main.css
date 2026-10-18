@@ -1659,14 +1659,22 @@ header.is-queue {
   position: fixed; bottom: 0; left: 0; right: 0;
   height: 110px;
   background: rgba(24, 20, 16, 0.98);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   border-top: 1px solid var(--border);
   z-index: 1001;
   transform: translateY(100%);
-  transition: transform 0.3s ease;
+  /* Hidden rather than merely off-screen, so the bar's controls stay
+     out of the tab order while it's closed. visibility flips after the
+     slide-out finishes on the way down, and immediately on the way up.
+     It preserves layout, so the waveform canvas can still be measured
+     while the bar is closed. */
+  visibility: hidden;
+  transition: transform 0.3s ease, visibility 0s linear 0.3s;
 }
-.playback-bar.active { transform: translateY(0); }
+.playback-bar.active {
+  transform: translateY(0);
+  visibility: visible;
+  transition: transform 0.3s ease, visibility 0s;
+}
 
 .pb-inner {
   max-width: var(--content-max-width);
@@ -1674,7 +1682,6 @@ header.is-queue {
   padding: 0 var(--content-padding-x);
   height: 100%;
   display: flex;
-  justify-content: space-between;
   align-items: center;
   gap: 1rem;
 }
@@ -1731,14 +1738,21 @@ header.is-queue {
   background: var(--border); overflow: hidden; flex-shrink: 0;
 }
 .pb-cover img { width: 100%; height: 100%; object-fit: cover; }
-.pb-info { flex: 1; min-width: 0; cursor: pointer; }
+.pb-info {
+  flex: 1; min-width: 0; cursor: pointer;
+  background: none; border: none; padding: 0;
+  font: inherit; color: inherit; text-align: left;
+}
+.pb-info:focus-visible {
+  outline: none; box-shadow: 0 0 0 2px var(--accent-glow); border-radius: 4px;
+}
 .pb-title {
-  font-size: 0.9rem; font-weight: 600; color: var(--text);
+  font-size: 0.9rem; font-weight: 600; line-height: 1.3; color: var(--text);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   overflow: hidden; transition: opacity 0.2s; opacity: 0.9;
 }
 .pb-artist {
-  font-size: 0.85rem; color: var(--text); line-height: 1.3;
+  font-size: 0.85rem; line-height: 1.3; color: var(--text);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   overflow: hidden; transition: opacity 0.2s; opacity: 0.9;
 }
@@ -1766,7 +1780,6 @@ header.is-queue {
 .pb-btn svg { width: 28px; height: 28px; fill: currentColor; stroke: none; }
 .pb-btn.play-pause svg { width: 40px; height: 40px; }
 .pb-btn.toggle-btn {
-  transition: none;
   width: 40px; height: 40px; padding: 0.35rem;
 }
 .pb-btn.toggle-btn svg { width: 20px; height: 20px; }
@@ -1837,6 +1850,11 @@ header.is-queue {
   margin: 0;
 }
 .pb-progress-row input[type=range]:focus { outline: none; }
+.pb-progress-row input[type=range]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-glow);
+  border-radius: 4px;
+}
 
 .pb-progress-row input[type=range]::-webkit-slider-runnable-track {
   width: 100%;
@@ -1865,7 +1883,7 @@ header.is-queue {
   background: none;
 }
 .pb-progress-row input[type=range]::-moz-range-thumb {
-  width: 1px;
+  width: 0.5px;
   height: 32px;
   border: none;
   border-radius: 0.5px;
@@ -1907,14 +1925,14 @@ header.is-queue {
   100% { transform: scale(1); opacity: 0; }
 }
 .hqplayer-audio-pipeline:not(.disconnected):not(.idle) circle:last-child {
-  opacity: 1 !important;
+  opacity: 1;
 }
 .hqplayer-audio-pipeline.disconnected .static-ring,
 .hqplayer-audio-pipeline.disconnected .ring { display: none; }
-.hqplayer-audio-pipeline.disconnected circle:last-child { opacity: 0.3 !important; }
+.hqplayer-audio-pipeline.disconnected circle:last-child { opacity: 0.3; }
 .hqplayer-audio-pipeline.idle .static-ring,
 .hqplayer-audio-pipeline.idle .ring { display: none; }
-.hqplayer-audio-pipeline.idle circle:last-child { opacity: 0.4 !important; }
+.hqplayer-audio-pipeline.idle circle:last-child { opacity: 0.4; }
 
 .hqplayer {
   display: flex; align-items: center; justify-content: center;
@@ -1924,6 +1942,7 @@ header.is-queue {
   transition: opacity 0.2s ease; outline: none;
 }
 .hqplayer:hover { opacity: 1; }
+.hqplayer:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--accent-glow); }
 .hqplayer.disconnected { opacity: 0.4; cursor: pointer; }
 .hqplayer.disconnected:hover { opacity: 0.8; }
 .hqplayer img {
@@ -1945,13 +1964,14 @@ header.is-queue {
   position: relative;
 }
 .vol-btn:hover { opacity: 1; }
+.vol-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--accent-glow); }
 .vol-btn svg {
   width: 28px; height: 28px;
   fill: none; stroke: currentColor; stroke-width: 1.5;
 }
 .vol-btn.disconnected {
-  opacity: 0.4 !important; filter: grayscale(100%);
-  cursor: default !important; pointer-events: none;
+  opacity: 0.4; filter: grayscale(100%);
+  cursor: default; pointer-events: none;
 }
 .vol-btn.disabled { opacity: 0.3; cursor: default; }
 .vol-db-text {
@@ -1959,12 +1979,25 @@ header.is-queue {
   transform: translate(-50%, -50%);
   font-size: 0.9rem; color: var(--text);
   font-variant-numeric: tabular-nums;
-  font-family: 'D-DIN', 'D-DIN Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   opacity: 0; pointer-events: none;
   transition: opacity 0.2s ease; white-space: nowrap;
 }
 .vol-btn.showing-db #volIcon { opacity: 0; transition: opacity 0.2s ease; }
 .vol-btn.showing-db .vol-db-text { opacity: 1; }
+
+/* The bar's motion is decorative: the pipeline rings pulse on a loop and
+   the bar itself slides. Neither carries information, so both stand down
+   when the user asks for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  .playback-bar,
+  .playback-bar.active {
+    transition: none;
+  }
+  .hqplayer-audio-pipeline .ring,
+  .hqplayer.launching {
+    animation: none;
+  }
+}
 
 
 /* ==========================================================================
@@ -2486,12 +2519,11 @@ header.is-queue {
     height: 20px;
   }
 
-  /* Play/pause scaled up to read as the anchor of the row, without
-     growing the box and pushing the transport row taller. */
+  /* Play/pause keeps the 44px box so its visual size matches its hit
+     area. Its denser 40px icon already reads as the anchor of the row. */
   .playback-bar.is-now-playing-view .pb-btn.play-pause {
     width: 44px;
     height: 44px;
-    transform: scale(1.55);
   }
   .playback-bar.is-now-playing-view .pb-btn.play-pause svg {
     width: 40px;

@@ -285,6 +285,8 @@ async function sendCommand(action) {
       // server-side playlist.
       $progress.value = 0;
       setTimeDisplay($pbTimeCurMin, $pbTimeCurSec, 0);
+      updateSeekValueText(0, currentPlayback.duration || 0);
+      paintWaveform(true);
     } else if (action === 'play') {
       transportGracePeriodUntil = Date.now() + 1500;
       currentPlayback.isPlaying = true;
@@ -316,6 +318,7 @@ function loadTrackIntoUI(trackIndex, preserveOffset = false) {
   }
 
   $pbTimeTot.textContent = formatTime(currentPlayback.duration);
+  updateSeekValueText(currentPlayback.offset || 0, currentPlayback.duration);
 }
 
 async function togglePlayPause() {
@@ -649,14 +652,13 @@ const HQPLAYER_DOWN_THRESHOLD = 3;
 function updatePlaybackBarMode() {
   if (!$playbackBar) return;
 
-  // Down mode — HQPlayer has been unreachable for several consecutive
-  // polls. The threshold guards against a transient blip.
-  if (!isHQPlayerRunning && hqplayerDownStreak >= HQPLAYER_DOWN_THRESHOLD) {
-    $playbackBar.classList.add('is-hqplayer-down');
-    $playbackBar.classList.remove('is-now-playing-view');
-  } else {
-    $playbackBar.classList.remove('is-hqplayer-down');
+  const wasDown = $playbackBar.classList.contains('is-hqplayer-down');
+  const wasNowPlayingView = $playbackBar.classList.contains('is-now-playing-view');
+  const isDown = !isHQPlayerRunning
+    && hqplayerDownStreak >= HQPLAYER_DOWN_THRESHOLD;
 
+  let isNowPlayingView = false;
+  if (!isDown) {
     // Compact mode — the album on screen is the one playing. Only
     // applied on mobile, where the bar is otherwise reduced to a
     // single play/pause button and the compact form restores the
@@ -667,25 +669,26 @@ function updatePlaybackBarMode() {
       ? allAlbums[currentDetailAlbumIndex]
       : null;
 
-    const isNowPlayingView = album
+    isNowPlayingView = !!(album
       && currentPlayback.album
       && currentPlayback.album.baseName === album.baseName
-      && currentPlayback.album.artist === album.artist;
-
-    $playbackBar.classList.toggle('is-now-playing-view', isNowPlayingView);
+      && currentPlayback.album.artist === album.artist);
   }
 
-  // The progress row may have just toggled between display:none and
-  // display:flex. Its canvas was measured once at script load, when
-  // the row was hidden on mobile — getBoundingClientRect() returned
-  // 0×0 and the cached dimensions ended up at 1×1. Paint then
-  // stretched that single pixel across the visible area, producing a
-  // solid bar. Re-measure and repaint on the next frame, after the
-  // browser has applied the layout change.
-  if (typeof scheduleWaveformRepaint === 'function') {
+  $playbackBar.classList.toggle('is-hqplayer-down', isDown);
+  $playbackBar.classList.toggle('is-now-playing-view', isNowPlayingView);
+
+  // The canvas geometry only changes when a mode class changes. Avoid a
+  // forced layout read and full repaint on status frames that leave the
+  // bar in the same mode.
+  const modeChanged = wasDown !== isDown
+    || wasNowPlayingView !== isNowPlayingView;
+  if (modeChanged && typeof scheduleWaveformRepaint === 'function') {
     scheduleWaveformRepaint();
   }
 }
+
+let currentPlayPauseIcon = null;
 
 function updatePlaybackUI() {
   if (currentPlayback.album) {
@@ -702,9 +705,21 @@ function updatePlaybackUI() {
     const currentTrack = getTrackByIndex(currentPlayback.album, currentPlayback.trackIndex);
     $pbTitle.textContent = currentTrack ? (currentTrack.getAttribute('song') || currentTrack.getAttribute('name')) : 'Unknown Track';
     $pbArtist.textContent = currentPlayback.album.artist;
-    $playPause.innerHTML = currentPlayback.isPlaying ? '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>' : '<path d="M8 5v14l11-7z"/>';
+
+    const playPauseIcon = currentPlayback.isPlaying ? 'pause' : 'play';
+    if (playPauseIcon !== currentPlayPauseIcon) {
+      currentPlayPauseIcon = playPauseIcon;
+      $playPause.innerHTML = playPauseIcon === 'pause'
+        ? '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>'
+        : '<path d="M8 5v14l11-7z"/>';
+      if ($pbPlayPauseBtn) {
+        $pbPlayPauseBtn.setAttribute(
+          'aria-label', playPauseIcon === 'pause' ? 'Pause' : 'Play');
+      }
+    }
   } else {
     $playbackBar.classList.remove('active');
+    currentPlayPauseIcon = null;
   }
 
   syncDetailPlayButton();

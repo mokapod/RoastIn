@@ -18,6 +18,7 @@ let repeatRequestToken  = 0;
 let shuffleRequestToken = 0;
 
 function updateRepeatUI(mode) {
+  if (!$repeatBtn) return;
   $repeatBtn.classList.toggle('repeat-one', mode === 'one');
   $repeatBtn.classList.toggle('active', mode !== 'off');
   $repeatBtn.setAttribute('aria-pressed', mode !== 'off');
@@ -28,6 +29,7 @@ function updateRepeatUI(mode) {
 }
 
 function updateShuffleUI(isOn) {
+  if (!$shuffleBtn) return;
   $shuffleBtn.classList.toggle('active', isOn);
   $shuffleBtn.setAttribute('aria-pressed', isOn);
   $shuffleBtn.setAttribute('aria-label', isOn ? 'Shuffle on' : 'Shuffle off');
@@ -35,7 +37,7 @@ function updateShuffleUI(isOn) {
 
 async function cycleRepeat() {
   if (!isHQPlayerRunning) {
-    const launched = await launchHQPlayerAndWait();
+    const launched = await ensureHQPlayerRunning();
     if (!launched) return;
   }
 
@@ -67,7 +69,7 @@ async function cycleRepeat() {
 
 async function toggleShuffle() {
   if (!isHQPlayerRunning) {
-    const launched = await launchHQPlayerAndWait();
+    const launched = await ensureHQPlayerRunning();
     if (!launched) return;
   }
 

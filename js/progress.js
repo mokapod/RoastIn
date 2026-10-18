@@ -5,6 +5,13 @@
    11. PROGRESS BAR
    ═══════════════════════════════════════════════════════════════════ */
 
+function updateSeekValueText(position, length) {
+  $progress.setAttribute(
+    'aria-valuetext',
+    `${formatTime(position)} of ${formatTime(length)}`
+  );
+}
+
 function handleProgressInput(e) {
   isDraggingProgress = true;
   const percent = parseFloat(e.target.value);
@@ -13,7 +20,9 @@ function handleProgressInput(e) {
   // the length the frontend has committed to. lastStatus.length would
   // also work, but only after the first poll of a new track.
   const duration = currentPlayback.duration || 0;
-  setTimeDisplay($pbTimeCurMin, $pbTimeCurSec, Math.round((percent / 100) * duration));
+  const previewTime = Math.round((percent / 100) * duration);
+  setTimeDisplay($pbTimeCurMin, $pbTimeCurSec, previewTime);
+  updateSeekValueText(previewTime, duration);
 
   // paintWaveform self-throttles on a 0.05% change, so calling it on
   // every input event is cheap.
@@ -34,6 +43,7 @@ async function handleProgressChange(e) {
 
   $progress.value = percent;
   setTimeDisplay($pbTimeCurMin, $pbTimeCurSec, seekTime);
+  updateSeekValueText(seekTime, duration);
 
   // Serialize the seek before any subsequent play command. Without
   // this await, the two fetches below can complete out of order: if
@@ -67,10 +77,6 @@ async function handleProgressChange(e) {
     updatePlaybackUI();
     fetch(`${API_BASE}/play`, { method: 'POST' }).catch(() => {});
   }
-
-  // The last input event already painted the waveform at this percent.
-  // No force-paint needed.
-  paintWaveform();
 }
 
 $progress.addEventListener('input', handleProgressInput);

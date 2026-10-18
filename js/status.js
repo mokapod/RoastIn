@@ -52,6 +52,10 @@ let lastSeenQueuePosition = null;
    back (reopen and re-seed from the stream's initial frames). */
 
 function startStatusStream() {
+  // The bar coasts on its anchor between heartbeats; the ticker is
+  // lifecycle-independent of the stream, so start it exactly once.
+  startPositionTicker();
+
   if (statusStream || document.hidden) return;
 
   const myGeneration = ++streamGeneration;
@@ -127,9 +131,19 @@ function applyFrame(kind, payload) {
   applyStatus(lastStatus);
 }
 
-/* Between heartbeats, advance the bar from the local anchor. Only runs
-   while something is playing, and stops at the track's end so the bar
-   doesn't run past the duration if a heartbeat is late. */
+/* Local position ticker. Heartbeats arrive at most every 30 s; between
+   them the bar coasts on the anchor via tickPosition(). One shared
+   500 ms interval keeps it smooth, skips hidden tabs, and otherwise
+   no-ops when nothing is playing. */
+let positionTickTimer = null;
+
+function startPositionTicker() {
+  if (positionTickTimer) return;
+  positionTickTimer = setInterval(() => {
+    if (!document.hidden) tickPosition();
+  }, 500);
+}
+
 function tickPosition() {
   if (!currentPlayback.isPlaying || isDraggingProgress) return;
   const length = positionAnchor.length || currentPlayback.duration || 0;
@@ -147,6 +161,7 @@ function tickPosition() {
     if (setTimeDisplay($pbTimeCurMin, $pbTimeCurSec, pos)) {
       $pbTimeTot.textContent = formatTime(length);
     }
+    updateSeekValueText(pos, length);
   }
   paintWaveform();
 }
@@ -259,12 +274,7 @@ function applyStatus(data) {
         isPlaying ? $pipeline.classList.remove('idle') : $pipeline.classList.add('idle');
       }
       if ($pbRight) $pbRight.classList.remove('disconnected');
-      if ($volBtn) {
-        $volBtn.classList.remove('disconnected');
-        $volBtn.style.removeProperty('opacity');
-        $volBtn.style.removeProperty('cursor');
-        $volBtn.disabled = false;
-      }
+      if ($volBtn) $volBtn.classList.remove('disconnected');
       isLaunchingHQPlayer = false;
     } else if (isLaunchingHQPlayer) {
       hqplayerDownStreak++;
@@ -274,12 +284,7 @@ function applyStatus(data) {
       }
       if ($pipeline) $pipeline.classList.remove('disconnected', 'idle');
       if ($pbRight) $pbRight.classList.remove('disconnected');
-      if ($volBtn) {
-        $volBtn.classList.remove('disconnected');
-        $volBtn.style.removeProperty('opacity');
-        $volBtn.disabled = false;
-        $volBtn.style.removeProperty('cursor');
-      }
+      if ($volBtn) $volBtn.classList.remove('disconnected');
     } else {
       isHQPlayerRunning = false;
       hqplayerDownStreak++;
@@ -358,11 +363,7 @@ function applyStatus(data) {
       const isShuffleOn = data.random === '1' || data.random === 1;
       if (shuffleOn !== isShuffleOn) {
         shuffleOn = isShuffleOn;
-        if ($shuffleBtn) {
-          $shuffleBtn.classList.toggle('active', shuffleOn);
-          $shuffleBtn.setAttribute('aria-pressed', shuffleOn);
-          $shuffleBtn.setAttribute('aria-label', shuffleOn ? 'Shuffle on' : 'Shuffle off');
-        }
+        updateShuffleUI(shuffleOn);
       }
 
       const serverRepeat = parseInt(data.repeat || '0', 10);
@@ -370,15 +371,7 @@ function applyStatus(data) {
 
       if (repeatMode !== newRepeatMode) {
         repeatMode = newRepeatMode;
-        if ($repeatBtn) {
-          $repeatBtn.classList.toggle('repeat-one', repeatMode === 'one');
-          $repeatBtn.classList.toggle('active', repeatMode !== 'off');
-          $repeatBtn.setAttribute('aria-pressed', repeatMode !== 'off');
-          $repeatBtn.setAttribute('aria-label',
-            repeatMode === 'off' ? 'Repeat off' :
-            repeatMode === 'all' ? 'Repeat all' : 'Repeat one'
-          );
-        }
+        updateRepeatUI(repeatMode);
       }
     }
 
@@ -480,6 +473,7 @@ function applyStatus(data) {
 					if (setTimeDisplay($pbTimeCurMin, $pbTimeCurSec, data.position)) {
 						$pbTimeTot.textContent = formatTime(data.length);
 					}
+          updateSeekValueText(data.position, data.length);
         }
 
         if (data.state === 'playing' && currentPlayback.isPlaying && timeSinceSeek > 1500) {
@@ -496,12 +490,10 @@ function applyStatus(data) {
 
     if (!volumeAvailable) {
       if ($volBtn) {
-        $volBtn.disabled = false;
         $volBtn.classList.add('disabled');
         updateVolumeIcon(100, false);
       }
     } else if ($volBtn) {
-      $volBtn.disabled = false;
       $volBtn.classList.remove('disabled');
     }
 
