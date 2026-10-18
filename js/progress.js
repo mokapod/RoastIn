@@ -36,9 +36,13 @@ async function handleProgressChange(e) {
   const seekTime = Math.round((percent / 100) * duration);
 
   // Update local state immediately so any poll landing before the
-  // server confirms the seek sees the new position.
+  // server confirms the seek sees the new position. Re-anchor the
+  // local clock too — tickPosition() advances from the anchor, and
+  // without this the next tick would recompute from the server's last
+  // reported position and pull the slider back to the pre-seek value.
   currentPlayback.offset = seekTime;
   currentPlayback.startTime = Date.now();
+  anchorPosition(seekTime, duration);
   lastSeekTime = Date.now();
 
   $progress.value = percent;

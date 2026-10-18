@@ -107,11 +107,7 @@ function applyFrame(kind, payload) {
   if (kind === 'heartbeat') {
     // Position only — re-anchor the local clock, don't touch anything
     // else. The bar and time text advance from this anchor.
-    positionAnchor = {
-      position: payload.position || 0,
-      length: payload.length || 0,
-      at: Date.now()
-    };
+    anchorPosition(payload.position, payload.length);
     lastStatus.position = payload.position;
     if (payload.length) lastStatus.length = payload.length;
     tickPosition();
@@ -121,11 +117,7 @@ function applyFrame(kind, payload) {
   Object.assign(lastStatus, payload);
 
   if (kind === 'transport') {
-    positionAnchor = {
-      position: payload.position || 0,
-      length: payload.length || 0,
-      at: Date.now()
-    };
+    anchorPosition(payload.position, payload.length);
   }
 
   applyStatus(lastStatus);
@@ -142,6 +134,19 @@ function startPositionTicker() {
   positionTickTimer = setInterval(() => {
     if (!document.hidden) tickPosition();
   }, 500);
+}
+
+// Re-anchor the local clock to a position we chose ourselves (seek,
+// stop, track change, restore). tickPosition() advances from this
+// anchor between server frames, so skipping the re-anchor would make
+// the next tick recompute from the server's last reported position
+// and yank the slider back to the pre-seek value.
+function anchorPosition(position, length) {
+  positionAnchor = {
+    position: position || 0,
+    length: length || 0,
+    at: Date.now()
+  };
 }
 
 function tickPosition() {
@@ -188,11 +193,7 @@ async function fetchStatus() {
     const res = await fetch(`${API_BASE}/status`);
     const data = await res.json();
     lastStatus = data;
-    positionAnchor = {
-      position: data.position || 0,
-      length: data.length || 0,
-      at: Date.now()
-    };
+    anchorPosition(data.position, data.length);
     applyStatus(data);
   } catch (e) {
     markDisconnected();

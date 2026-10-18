@@ -193,6 +193,7 @@ function restorePlaybackFromServer(data) {
   if (data.length > 0) {
     $progress.value = (data.position / data.length) * 100;
     setTimeDisplay($pbTimeCurMin, $pbTimeCurSec, data.position);
+    anchorPosition(data.position, data.length);
   }
 
   if (foundTrack) {

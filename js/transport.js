@@ -286,6 +286,7 @@ async function sendCommand(action) {
       $progress.value = 0;
       setTimeDisplay($pbTimeCurMin, $pbTimeCurSec, 0);
       updateSeekValueText(0, currentPlayback.duration || 0);
+      anchorPosition(0, currentPlayback.duration);
       paintWaveform(true);
     } else if (action === 'play') {
       transportGracePeriodUntil = Date.now() + 1500;
@@ -319,6 +320,7 @@ function loadTrackIntoUI(trackIndex, preserveOffset = false) {
 
   $pbTimeTot.textContent = formatTime(currentPlayback.duration);
   updateSeekValueText(currentPlayback.offset || 0, currentPlayback.duration);
+  anchorPosition(currentPlayback.offset, currentPlayback.duration);
 }
 
 async function togglePlayPause() {
