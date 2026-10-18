@@ -4,8 +4,8 @@ A web-based music library player that fronts HQPlayer, with waveform seek bars, 
 
 ## What it does
 
-- **Library browser** — scans a local FLAC/WAV/AIFF/ALAC/DSD music root and serves a fast, searchable album/artist/composer view in the browser.
-- **HQPlayer control** — play, queue, transport, volume (dB-stepped), and HQPlayer Desktop lifecycle (restart, DirectSDM toggle) via HQPlayer's local XML-RPC API.
+- **Library browser** — reads HQPlayer's own library (`~/.hqplayer/library.xml`) and serves it as a fast, searchable album/artist/composer view in the browser. RoastIn does not scan your music folders; whatever HQPlayer has indexed is what you see.
+- **HQPlayer control** — play, queue, transport, volume (dB-stepped), and HQPlayer Desktop lifecycle (restart, DirectSDM toggle) via HQPlayer's XML control protocol on its TCP control port (default `4321`).
 - **Waveform seek bars** — server-side waveform extraction with ffmpeg + numpy, rendered as playable waveform/bar visuals. Cached per-track in `waveform_cache/` (90-day auto-prune).
 - **Artist aliases** — merge artist/composer name variants (`aliases.json`), so "Karl Böhm" and "Karl Boehm" stay one entity.
 - **Favorites** — pin albums (`favorites.json`).
@@ -32,7 +32,9 @@ settings.json      Frontend + server configuration
 ./server.py            # or: python3 server.py
 ```
 
-Then open `http://localhost:8080`. Edit `settings.json` to point `httpHost`/`httpPort` at what you want, and set your music library root.
+Then open `http://localhost:8080`. Edit `settings.json` to point `httpHost`/`httpPort` at what you want, and set `homePath` if HQPlayer's `.hqplayer` directory is not under your home directory.
+
+Requires a running HQPlayer Desktop instance, since the library and all playback state come from it.
 
 - Default bind is `0.0.0.0` — any network device can open the UI.
 - When not on localhost, every API request needs an `X-API-Token` header. The token lives in `.api_token` (auto-generated on first start, `chmod 600`, git-ignored — treat it like a password).
@@ -43,7 +45,7 @@ Then open `http://localhost:8080`. Edit `settings.json` to point `httpHost`/`htt
 All settings live in `settings.json`:
 
 - `frontend` — read by the browser, injected as `window.CONFIG`: polling interval, sort order, waveform style/colors, volume range and step.
-- `server` — read by the Python backend only, never sent to the browser: bind host/port, HQPlayer host/port, ffmpeg path, waveform cache dir and resolution.
+- `server` — read by the Python backend only, never sent to the browser: bind host/port, HQPlayer host/port and control port, `homePath` (where HQPlayer's `.hqplayer/library.xml` lives), `coverRoots` (extra roots art may be served from, e.g. an external volume), ffmpeg path, waveform cache dir and resolution.
 
 ## Notes
 
