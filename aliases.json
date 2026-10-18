@@ -1,0 +1,1694 @@
+{
+  "artistAliases": {
+    "Academy of St Martin in the Fields": [
+      "Academy of St Martin in the Fields"
+    ],
+    "Alexander Vedernikov": [
+      "Alexander Vedernikov"
+    ],
+    "Amsterdam Sinfonietta": [
+      "Amsterdam Sinfonietta"
+    ],
+    "Andrea Marcon": [
+      "Andrea Marcon"
+    ],
+    "Andreas Ottensamer": [
+      "Andreas Ottensamer"
+    ],
+    "Andrew Manze": [
+      "Andrew Manze"
+    ],
+    "André Previn": [
+      "Andre Previn",
+      "André Previn"
+    ],
+    "Anne-Sophie Mutter": [
+      "Anne-Sophie Mutter"
+    ],
+    "Antal Doráti": [
+      "Antal Doráti",
+      "Antal Dorati"
+    ],
+    "Anton Karas": [
+      "Anton Karas"
+    ],
+    "Antonio Carlos Jobim": [
+      "Antonio Carlos Jobim",
+      "Antônio Carlos Jobim"
+    ],
+    "Arne Domnérus": [
+      "Arne Domnérus",
+      "Arne Domnerus"
+    ],
+    "Arpad Gérecz": [
+      "Arpad Gerecz",
+      "Arpad Gérecz"
+    ],
+    "Arthur Grumiaux": [
+      "Arthur Grumiaux"
+    ],
+    "Arthur Rubinstein": [
+      "Arthur Rubinstein"
+    ],
+    "Atlanta Symphony Orchestra": [
+      "Atlanta Symphony Orchestra"
+    ],
+    "Berlin Radio Symphony Orchestra": [
+      "Berlin Radio Symphony Orchestra"
+    ],
+    "Berliner Philharmoniker": [
+      "Berliner Philharmoniker",
+      "Berlin Philharmonic"
+    ],
+    "Bernard Haitink": [
+      "Bernard Haitink"
+    ],
+    "Billie Eilish": [
+      "Billie Eilish"
+    ],
+    "Bob Marley & The Wailers": [
+      "Bob Marley & The Wailers"
+    ],
+    "Boston Pops Orchestra": [
+      "Boston Pops Orchestra",
+      "Boston Pops"
+    ],
+    "Buena Vista Social Club": [
+      "Buena Vista Social Club"
+    ],
+    "Camerata Salzburg": [
+      "Camerata Salzburg"
+    ],
+    "Cannonball Adderley": [
+      "Cannonball Adderley"
+    ],
+    "Carlos Kleiber": [
+      "Carlos Kleiber"
+    ],
+    "Carole King": [
+      "Carole King"
+    ],
+    "Charles Dutoit": [
+      "Charles Dutoit"
+    ],
+    "Charles Munch": [
+      "Charles Munch"
+    ],
+    "Charlie Byrd": [
+      "Charlie Byrd"
+    ],
+    "Chicago Symphony Orchestra": [
+      "Chicago Symphony Orchestra",
+      "Chicago Symphony Orchestra (CSO)"
+    ],
+    "Cincinnati Pops Orchestra": [
+      "Cincinnati Pops Orchestra"
+    ],
+    "Claudio Abbado": [
+      "Claudio Abbado"
+    ],
+    "Cleveland Orchestra": [
+      "Cleveland Orchestra"
+    ],
+    "Clifford Curzon": [
+      "Clifford Curzon"
+    ],
+    "Daniel Barenboim": [
+      "Daniel Barenboim"
+    ],
+    "Daniel Gaede": [
+      "Daniel Gaede"
+    ],
+    "Dave Brubeck Quartet": [
+      "Dave Brubeck Quartet",
+      "The Dave Brubeck Quartet"
+    ],
+    "David Oistrakh": [
+      "David Oistrach",
+      "David Oistrakh",
+      "David Oïstrakh"
+    ],
+    "David Zinman": [
+      "David Zinman"
+    ],
+    "Diana Krall": [
+      "Diana Krall"
+    ],
+    "Dmitry Yablonsky": [
+      "Dmitry Yablonsky"
+    ],
+    "Dr. Dre": [
+      "Dr. Dre",
+      "Dr Dre"
+    ],
+    "Eagles": [
+      "Eagles",
+      "The Eagles"
+    ],
+    "Edo de Waart": [
+      "Edo de Waart"
+    ],
+    "Ella Fitzgerald": [
+      "Ella Fitzgerald"
+    ],
+    "Emanuel Ax": [
+      "Emanuel Ax"
+    ],
+    "Emanuel Hurwitz": [
+      "Emanuel Hurwitz"
+    ],
+    "Emerson String Quartet": [
+      "Emerson String Quartet"
+    ],
+    "Emil Gilels": [
+      "Emil Gilels"
+    ],
+    "Eric Clapton": [
+      "Eric Clapton"
+    ],
+    "Erich Leinsdorf": [
+      "Erich Leinsdorf"
+    ],
+    "Ernest Ansermet": [
+      "Ernest Ansermet"
+    ],
+    "Eugene Ormandy": [
+      "Eugene Ormandy"
+    ],
+    "Eva Cassidy": [
+      "Eva Cassidy"
+    ],
+    "Evgeny Kissin": [
+      "Evgeny Kissin"
+    ],
+    "Evgeny Mravinsky": [
+      "Evgeny Mravinsky"
+    ],
+    "Fazil Say": [
+      "Fazil Say",
+      "Fazıl Say"
+    ],
+    "Felix Ayo": [
+      "Felix Ayo"
+    ],
+    "Ferenc Fricsay": [
+      "Ferenc Fricsay"
+    ],
+    "Fleetwood Mac": [
+      "Fleetwood Mac"
+    ],
+    "Freiburger Barockorchester": [
+      "Freiburger Barockorchester"
+    ],
+    "Fritz Reiner": [
+      "Fritz Reiner"
+    ],
+    "Gabriela Montero": [
+      "Gabriela Montero"
+    ],
+    "Gautier Capuçon": [
+      "Gautier Capuçon",
+      "Gautier Capucon"
+    ],
+    "Georg Hortnagel": [
+      "Georg Hortnagel"
+    ],
+    "George Szell": [
+      "George Szell"
+    ],
+    "Gervase De Peyer": [
+      "Gervase De Peyer"
+    ],
+    "Ginette Neveu": [
+      "Ginette Neveu"
+    ],
+    "Gustavo Dudamel": [
+      "Gustavo Dudamel"
+    ],
+    "Heinz Holliger": [
+      "Heinz Holliger"
+    ],
+    "Henryk Szeryng": [
+      "Henryk Szeryng"
+    ],
+    "Herbert von Karajan": [
+      "Herbert von Karajan",
+      "Karajan"
+    ],
+    "Herman Krebbers": [
+      "Herman Krebbers"
+    ],
+    "Hikaru Utada": [
+      "Hikaru Utada"
+    ],
+    "I Musici": [
+      "I Musici"
+    ],
+    "I Musici de Montréal": [
+      "I Musici de Montréal",
+      "I Musici de Montreal"
+    ],
+    "Itzhak Perlman": [
+      "Itzhak Perlman"
+    ],
+    "James Levine": [
+      "James Levine"
+    ],
+    "Jan Garbarek": [
+      "Jan Garbarek"
+    ],
+    "Jascha Heifetz": [
+      "Jascha Heifetz",
+      "Jasha Heifetz"
+    ],
+    "Jean Martinon": [
+      "Jean Martinon"
+    ],
+    "Joanna Wang": [
+      "Joanna Wang"
+    ],
+    "Joao Gilberto": [
+      "Joao Gilberto",
+      "João Gilberto"
+    ],
+    "John Eliot Gardiner": [
+      "John Eliot Gardiner"
+    ],
+    "János Starker": [
+      "János Starker",
+      "Janos Starker"
+    ],
+    "Jörg Faerber": [
+      "Jörg Faerber"
+    ],
+    "Karl Böhm": [
+      "Karl Böhm",
+      "Karl Bohm"
+    ],
+    "Karl Swoboda": [
+      "Karl Swoboda"
+    ],
+    "Katie Melua": [
+      "Katie Melua"
+    ],
+    "Kenny G": [
+      "Kenny G"
+    ],
+    "Kirill Kondrashin": [
+      "Kirill Kondorashin",
+      "Kirill Kondrashin"
+    ],
+    "Koji Toyoda": [
+      "Koji Toyoda"
+    ],
+    "Krystian Zimerman": [
+      "Krystian Zimerman"
+    ],
+    "Kyung-Wha Chung": [
+      "Kyung-Wha Chung",
+      "Kyung Wha Chung"
+    ],
+    "L'Orchestre de la Suisse Romande": [
+      "L'Orchestre de la Suisse Romande",
+      "Orchestre de la Suisse Romande",
+      "Suisse Romande Orchestra"
+    ],
+    "Lamar Crawson": [
+      "Lamar Crawson",
+      "Lamar Crowson"
+    ],
+    "Lang Lang": [
+      "Lang Lang"
+    ],
+    "Leila Josefowicz": [
+      "Leila Josefowicz"
+    ],
+    "Leningrad Philharmonic Orchestra": [
+      "Leningrad Philharmonic Orchestra"
+    ],
+    "Leonard Bernstein": [
+      "Leonard Bernstein"
+    ],
+    "Leonard Cohen": [
+      "Leonard Cohen"
+    ],
+    "Leonid Kogan": [
+      "Leonid Kogan"
+    ],
+    "Leonidas Kavakos": [
+      "Leonidas Kavakos"
+    ],
+    "Leopold Wlach": [
+      "Leopold Wlach"
+    ],
+    "Les Solistes Romands": [
+      "Les Solistes Romands"
+    ],
+    "London Philharmonic Orchestra": [
+      "London Philharmonic Orchestra"
+    ],
+    "London Symphony Orchestra": [
+      "London Symphony Orchestra",
+      "London Symphony Orchestra (LSO)"
+    ],
+    "Los Angeles Philharmonic": [
+      "Los Angeles Philharmonic"
+    ],
+    "Louis Armstrong": [
+      "Louis Armstrong"
+    ],
+    "Luiz Bonfá": [
+      "Luiz Bonfá",
+      "Luiz Bonfa"
+    ],
+    "Malmö Symphony Orchestra": [
+      "Malmö Symphony Orchestra",
+      "Malmo Symphony Orchestra"
+    ],
+    "Marc Soustrot": [
+      "Marc Soustrot"
+    ],
+    "Maria Joao Pires": [
+      "Maria Joao Pires",
+      "Maria João Pires"
+    ],
+    "Martha Argerich": [
+      "Martha Argerich"
+    ],
+    "Maurice Hasson": [
+      "Maurice Hasson"
+    ],
+    "Maxim Shostakovich": [
+      "Maxim Shostakovich"
+    ],
+    "Maxim Vengerov": [
+      "Maxim Vengerov"
+    ],
+    "Melody Gardot": [
+      "Melody Gardot"
+    ],
+    "Melos Ensemble": [
+      "Melos Ensemble"
+    ],
+    "Michael Jackson": [
+      "Michael Jackson"
+    ],
+    "Miles Davis": [
+      "Miles Davis"
+    ],
+    "Minnesota Orchestra": [
+      "Minnesota Orchestra"
+    ],
+    "Mischa Maisky": [
+      "Mischa Maisky"
+    ],
+    "Muddy Waters": [
+      "Muddy Waters"
+    ],
+    "Murray Perahia": [
+      "Murray Perahia"
+    ],
+    "Nathan Milstein": [
+      "Nathan Milstein"
+    ],
+    "Nelson Freire": [
+      "Nelson Freire"
+    ],
+    "New Philharmonia Orchestra": [
+      "New Philharmonia Orchestra"
+    ],
+    "Nicolas de Angelis": [
+      "Nicolas de Angelis"
+    ],
+    "Norah Jones": [
+      "Norah Jones"
+    ],
+    "Orchestra Of The Bolshoi Theatre Moscow": [
+      "Orchestra Of The Bolshoi Theatre Moscow"
+    ],
+    "Orchestra of the Royal Opera House, Covent Garden": [
+      "Orchestra of the Royal Opera House, Covent Garden",
+      "Orchestra Of The Royal Opera House, Covent Garden"
+    ],
+    "Orchestre de Paris": [
+      "Orchestre de Paris"
+    ],
+    "Orchestre National de France": [
+      "Orchestre National de France"
+    ],
+    "Orchestre National De L' O.R.T.F.": [
+      "Orchestre National De L' O.R.T.F."
+    ],
+    "Orchestre Philharmonique Royal de Liège": [
+      "Orchestre Philharmonique Royal de Liège"
+    ],
+    "Orchestre Révolutionnaire et Romantique": [
+      "Orchestre Révolutionnaire et Romantique"
+    ],
+    "Orchestre symphonique de Montreal": [
+      "Orchestre symphonique de Montreal",
+      "Orchestre Symphonique de Montreal"
+    ],
+    "Otto Klemperer": [
+      "Otto Klemperer"
+    ],
+    "Paul Desmond": [
+      "Paul Desmond"
+    ],
+    "Pavel Gililov": [
+      "Pavel Gililov"
+    ],
+    "Pavel Haas Quartet": [
+      "Pavel Haas Quartet"
+    ],
+    "Philharmonia Hungarica": [
+      "Philharmonia Hungarica"
+    ],
+    "Philharmonia Orchestra": [
+      "Philharmonia Orchestra"
+    ],
+    "Philippe Entremont": [
+      "Philippe Entremont"
+    ],
+    "Pinchas Zukerman": [
+      "Pinchas Zukerman"
+    ],
+    "Pink Floyd": [
+      "Pink Floyd"
+    ],
+    "Polish Chamber Philharmonic Orchestra Sopot": [
+      "Polish Chamber Philharmonic Orchestra Sopot"
+    ],
+    "Polish Festival Orchestra": [
+      "Polish Festival Orchestra"
+    ],
+    "Prager Streichquartett": [
+      "Prager Streichquartett"
+    ],
+    "Quartetto Italiano": [
+      "Quartetto Italiano"
+    ],
+    "Radio Symphony Orchestra Frankfurt": [
+      "Radio Symphony Orchestra Frankfurt"
+    ],
+    "Radu Lupu": [
+      "Radu Lupu"
+    ],
+    "Rafael Kubelik": [
+      "Rafael Kubelik",
+      "Rafael Kubelík"
+    ],
+    "Riccardo Chailly": [
+      "Riccardo Chailly"
+    ],
+    "Riccardo Muti": [
+      "Riccardo Muti"
+    ],
+    "Roberto Michelucci": [
+      "Roberto Michelucci"
+    ],
+    "Royal Concertgebouw Orchestra": [
+      "Royal Concertgebouw Orchestra",
+      "Concertgebouw Orchestra of Amsterdam"
+    ],
+    "Royal Philharmonic Orchestra": [
+      "Royal Philharmonic Orchestra"
+    ],
+    "Russian State Symphony Orchestra": [
+      "Russian State Symphony Orchestra"
+    ],
+    "Salvatore Accardo": [
+      "Salvatore Accardo"
+    ],
+    "San Francisco Symphony": [
+      "San Francisco Symphony"
+    ],
+    "Scottish Chamber Orchestra": [
+      "Scottish Chamber Orchestra"
+    ],
+    "Shanghai Shimpony Orchestra": [
+      "Shanghai Shimpony Orchestra"
+    ],
+    "Si-Qing Lu": [
+      "Si-Qing Lu"
+    ],
+    "Siegfried Kurz": [
+      "Siegfried Kurz"
+    ],
+    "Sir Charles Mackerras": [
+      "Sir Charles Mackerras",
+      "Charles Mackerras"
+    ],
+    "Sir Colin Davis": [
+      "Colin Davis",
+      "Sir Colin Davis"
+    ],
+    "Sir Georg Solti": [
+      "Sir Georg Solti",
+      "Georg Solti"
+    ],
+    "Sir James Galway": [
+      "Sir James Galway",
+      "James Galway"
+    ],
+    "Sir Neville Marriner": [
+      "Sir Neville Marriner",
+      "Neville Marriner"
+    ],
+    "Sir Simon Rattle": [
+      "Sir Simon Rattle",
+      "Simon Rattle"
+    ],
+    "Staatskapelle Dresden": [
+      "Staatskapelle Dresden"
+    ],
+    "Stan Getz": [
+      "Stan Getz"
+    ],
+    "Stanislaw Skrowaczewski": [
+      "Stanislaw Skrowaczewski",
+      "Stanisław Skrowaczewski"
+    ],
+    "State Academic Symphony Orchestra of Russia Evgeny Svetlanov": [
+      "State Academic Symphony Orchestra of Russia Evgeny Svetlanov"
+    ],
+    "Stephen Hough": [
+      "Stephen Hough"
+    ],
+    "Steven Isserlis": [
+      "Steven Isserlis"
+    ],
+    "Stuttgarter Kammerorchester": [
+      "Stuttgarter Kammerorchester",
+      "Stuttgart Chamber Orchestra"
+    ],
+    "Sviatoslav Richter": [
+      "Sviatoslav Richter",
+      "Richter"
+    ],
+    "Symphonie-Orchester des Bayerischen Rundfunks": [
+      "Symphonie-Orchester des Bayerischen Rundfunks",
+      "Bavarian Radio Symphony Orchestra"
+    ],
+    "The Beatles": [
+      "The Beatles",
+      "Beatles"
+    ],
+    "The English Concert": [
+      "The English Concert"
+    ],
+    "The Philadelphia Orchestra": [
+      "The Philadelphia Orchestra",
+      "Philadelphia Orchestra"
+    ],
+    "The Vienna Octet": [
+      "The Vienna Octet",
+      "Vienna Octet"
+    ],
+    "The Weeknd": [
+      "The Weeknd"
+    ],
+    "Trevor Pinnock": [
+      "Trevor Pinnock"
+    ],
+    "Various Artists": [
+      "Various Artists",
+      "滚石群星"
+    ],
+    "Venice Baroque Orchestra": [
+      "Venice Baroque Orchestra"
+    ],
+    "Vienna Konzerthaus Quartet": [
+      "Vienna Konzerthaus Quartet"
+    ],
+    "Viktoria Mullova": [
+      "Viktoria Mullova"
+    ],
+    "Vladimir Jurowski": [
+      "Vladimir Jurowski"
+    ],
+    "Warsaw Philharmonic Orchestra": [
+      "Warsaw Philharmonic Orchestra"
+    ],
+    "Wiener Philharmoniker": [
+      "Wiener Philharmoniker",
+      "Wiener Philharmonic Orchestra",
+      "Vienna Philharmonic"
+    ],
+    "Wiener Symphoniker": [
+      "Wiener Symphoniker",
+      "Wiener Symphoniker, Vienna Symphony"
+    ],
+    "Wilhelm Kempff": [
+      "Wilhelm Kempff"
+    ],
+    "Yo-Yo Ma": [
+      "Yo-Yo Ma"
+    ],
+    "Yuja Wang": [
+      "Yuja Wang"
+    ],
+    "Yuli Turovsky": [
+      "Yuli Turovsky"
+    ],
+    "Yundi Li": [
+      "Yundi Li",
+      "YUNDI"
+    ],
+    "Zoltán Kocsis": [
+      "Zoltán Kocsis"
+    ],
+    "丘丘合唱團": [
+      "丘丘合唱團"
+    ],
+    "包美聖": [
+      "包美聖"
+    ],
+    "坣娜": [
+      "坣娜"
+    ],
+    "張學友": [
+      "張學友"
+    ],
+    "戴佩妮": [
+      "戴佩妮"
+    ],
+    "施孝榮": [
+      "施孝榮"
+    ],
+    "李建復": [
+      "李建復"
+    ],
+    "潘越雲": [
+      "潘越雲"
+    ],
+    "王夢麟": [
+      "王夢麟"
+    ],
+    "王菲": [
+      "王菲",
+      "王靖雯"
+    ],
+    "莫文蔚": [
+      "莫文蔚"
+    ],
+    "蔡琴": [
+      "蔡琴"
+    ],
+    "許美靜": [
+      "許美靜",
+      "Mavis Hsu"
+    ],
+    "鄭怡": [
+      "鄭怡"
+    ],
+    "鮑比達 & 蔡琴": [
+      "鮑比達 & 蔡琴"
+    ],
+    "齊豫": [
+      "齊豫"
+    ]
+  },
+  "composerAliases": {
+    "A. Adam": [
+      "A. Adam",
+      "Adolphe Adam",
+      "Adam"
+    ],
+    "Adolphe Adam": [
+      "Adolphe Adam",
+      "Adam"
+    ],
+    "Alan Menken": [
+      "Alan Menken"
+    ],
+    "Alberto Ginastera": [
+      "Alberto Ginastera"
+    ],
+    "Alexander Borodin": [
+      "Alexander Borodin",
+      "Alexandre Borodine",
+      "Borodin"
+    ],
+    "Alexander Glazunov": [
+      "Alexander Glazunov",
+      "Aleksandr Glazunov",
+      "Alexandre Glazounov",
+      "Alexander Glazunov (1865-1936)",
+      "Glazunov"
+    ],
+    "Alexander Scriabin": [
+      "Alexander Scriabin",
+      "Scriabin"
+    ],
+    "Alfred Newman": [
+      "Alfred Newman",
+      "Newman"
+    ],
+    "Amilcare Ponchielli": [
+      "Amilcare Ponchielli",
+      "Ponchielli"
+    ],
+    "Anatoly Lyadov": [
+      "Anatoly Lyadov",
+      "Lyadov"
+    ],
+    "Andrea Morricone": [
+      "Andrea Morricone",
+      "A. Morricone"
+    ],
+    "Andrew Wrangell": [
+      "Andrew Wrangell",
+      "Wrangell"
+    ],
+    "Anonyme": [
+      "Anonyme",
+      "Anonymous"
+    ],
+    "Antal Doráti": [
+      "Antal Doráti"
+    ],
+    "Anton Arensky": [
+      "Anton Arensky",
+      "Arensky"
+    ],
+    "Anton Bruckner": [
+      "Anton Bruckner",
+      "Bruckner"
+    ],
+    "Anton Rubinstein": [
+      "Anton Rubinstein",
+      "Rubinstein"
+    ],
+    "Antonio Pasculli": [
+      "Antonio Pasculli"
+    ],
+    "Antonio Vivaldi": [
+      "Antonio Vivaldi",
+      "Vivaldi"
+    ],
+    "Antonín Dvořák": [
+      "Antonín Dvořák",
+      "Antonin Dvorak",
+      "Antonín Dvorák",
+      "Dvorak"
+    ],
+    "Antônio Carlos Jobim": [
+      "Antônio Carlos Jobim",
+      "Antonio Carlos Jobim",
+      "Jobim"
+    ],
+    "Aram Khachaturian": [
+      "Aram Khachaturian",
+      "Khachaturian"
+    ],
+    "Arcangelo Corelli": [
+      "Arcangelo Corelli",
+      "Corelli"
+    ],
+    "Arthur Bliss": [
+      "Arthur Bliss",
+      "Bliss"
+    ],
+    "Ary Barroso": [
+      "Ary Barroso",
+      "Barroso"
+    ],
+    "Astor Piazzolla": [
+      "Astor Piazzolla",
+      "Piazzolla"
+    ],
+    "Bela Bartok": [
+      "Bela Bartok",
+      "Béla Bartók",
+      "Bartok"
+    ],
+    "Berry Gordy": [
+      "Berry Gordy"
+    ],
+    "Bob Marley": [
+      "Bob Marley"
+    ],
+    "Bruce Broughton": [
+      "Bruce Broughton",
+      "Broughton"
+    ],
+    "C. King": [
+      "C. King"
+    ],
+    "Camille Saint-Saëns": [
+      "Camille Saint-Saëns",
+      "Camille Saint-Saens",
+      "CAMILLE SAINT-SAENS",
+      "Saint-Saëns",
+      "Saint-Saens"
+    ],
+    "Carl Maria von Weber": [
+      "Carl Maria von Weber",
+      "Carl Maria Von Weber",
+      "Weber"
+    ],
+    "Carl Nielsen": [
+      "Carl Nielsen",
+      "Nielsen"
+    ],
+    "Carl Orff": [
+      "Carl Orff",
+      "Orff"
+    ],
+    "Carl Philipp Emanuel Bach": [
+      "Carl Philipp Emanuel Bach"
+    ],
+    "Carlo 'Illangelo' Montagnese": [
+      "Carlo 'Illangelo' Montagnese"
+    ],
+    "Carlos Gardel": [
+      "Carlos Gardel",
+      "Gardel"
+    ],
+    "Carole King": [
+      "Carole King"
+    ],
+    "Charles Avison": [
+      "Charles Avison",
+      "Avison"
+    ],
+    "Charles Gounod": [
+      "Charles Gounod",
+      "Gounod"
+    ],
+    "Christian Petzold": [
+      "Christian Petzold",
+      "Petzold"
+    ],
+    "Christian Sinding": [
+      "Christian Sinding"
+    ],
+    "Claude Debussy": [
+      "Claude Debussy",
+      "Debussy"
+    ],
+    "Consuelo Velazquez": [
+      "Consuelo Velazquez",
+      "Velazquez"
+    ],
+    "Curtis Mayfield": [
+      "Curtis Mayfield"
+    ],
+    "César Franck": [
+      "César Franck"
+    ],
+    "D. Cole": [
+      "D. Cole"
+    ],
+    "Dan Wilson": [
+      "Dan Wilson"
+    ],
+    "Darius Milhaud": [
+      "Darius Milhaud",
+      "Milhaud"
+    ],
+    "David Cole": [
+      "David Cole"
+    ],
+    "Dimitri Tiomkin": [
+      "Dimitri Tiomkin",
+      "Tiomkin"
+    ],
+    "Dmitri Shostakovich": [
+      "Dmitri Shostakovich",
+      "Dmitry Shostakovich",
+      "Dimitri Chostakovitch",
+      "Shostakovich"
+    ],
+    "Doc McKinney": [
+      "Doc McKinney"
+    ],
+    "Dolly Parton": [
+      "Dolly Parton"
+    ],
+    "Don Felder": [
+      "Don Felder"
+    ],
+    "Don Henley": [
+      "Don Henley"
+    ],
+    "Duke Ellington": [
+      "Duke Ellington"
+    ],
+    "Dylan Wiggins": [
+      "Dylan Wiggins"
+    ],
+    "Edvard Grieg": [
+      "Edvard Grieg",
+      "Grieg"
+    ],
+    "Ellis Reynolds": [
+      "Ellis Reynolds"
+    ],
+    "Elmer Bernstein": [
+      "Elmer Bernstein",
+      "Bernstein"
+    ],
+    "Emmanuel Nickerson": [
+      "Emmanuel Nickerson"
+    ],
+    "Ennio Morricone": [
+      "Ennio Morricone",
+      "Morricone"
+    ],
+    "ERIC CHEDEVILLE": [
+      "ERIC CHEDEVILLE"
+    ],
+    "Erich Wolfgang Korngold": [
+      "Erich Wolfgang Korngold",
+      "Korngold"
+    ],
+    "Erik Satie": [
+      "Erik Satie",
+      "Satie"
+    ],
+    "Ernesto Lecuona": [
+      "Ernesto Lecuona",
+      "Lecuona"
+    ],
+    "Ernesto Nazareth": [
+      "Ernesto Nazareth",
+      "Nazareth"
+    ],
+    "Édouard Lalo": [
+      "Édouard Lalo"
+    ],
+    "Felix Mendelssohn": [
+      "Felix Mendelssohn",
+      "Felix Mendelssohn-Bartholdy",
+      "Mendelssohn"
+    ],
+    "Ferdinand Hérold": [
+      "Ferdinand Hérold",
+      "Hérold"
+    ],
+    "Ford Vincent": [
+      "Ford Vincent"
+    ],
+    "Francis Poulenc": [
+      "Francis Poulenc",
+      "Poulenc"
+    ],
+    "Frank Churchill": [
+      "Frank Churchill"
+    ],
+    "François Joseph Gossec": [
+      "François Joseph Gossec"
+    ],
+    "František Drdla": [
+      "František Drdla"
+    ],
+    "Franz Berwald": [
+      "Franz Berwald",
+      "Berwald"
+    ],
+    "Franz Lehár": [
+      "Franz Lehár"
+    ],
+    "Franz Liszt": [
+      "Franz Liszt",
+      "Liszt"
+    ],
+    "Franz Schubert": [
+      "Franz Schubert",
+      "Schubert"
+    ],
+    "Franz Waxman": [
+      "Franz Waxman",
+      "Waxman"
+    ],
+    "Friedrich Burgmuller": [
+      "Friedrich Burgmuller",
+      "F. Burgmüller",
+      "Burgmuller"
+    ],
+    "Friedrich Kuhlau": [
+      "Friedrich Kuhlau",
+      "Kuhlau"
+    ],
+    "Fritz Kreisler": [
+      "Fritz Kreisler",
+      "Kreisler"
+    ],
+    "Frédéric Chopin": [
+      "Frédéric Chopin",
+      "Frederic Chopin",
+      "Frdric Chopin",
+      "Chopin"
+    ],
+    "Gabriel Fauré": [
+      "Gabriel Fauré",
+      "Fauré"
+    ],
+    "Georg Friedrich Händel": [
+      "Georg Friedrich Händel",
+      "Handel"
+    ],
+    "George Gershwin": [
+      "George Gershwin"
+    ],
+    "George Harrison": [
+      "George Harrison"
+    ],
+    "Georges Bizet": [
+      "Georges Bizet",
+      "Bizet"
+    ],
+    "Gioachino Rossini": [
+      "Gioachino Rossini",
+      "Gioacchino Rossini",
+      "Rossini"
+    ],
+    "Giovanni Battista Sammartini": [
+      "Giovanni Battista Sammartini",
+      "Sammartini"
+    ],
+    "Giuseppe Tartini": [
+      "Giuseppe Tartini",
+      "Tartini"
+    ],
+    "Giuseppe Verdi": [
+      "Giuseppe Verdi",
+      "Verdi"
+    ],
+    "Glen Ballard": [
+      "Glen Ballard"
+    ],
+    "Glenn Frey": [
+      "Glenn Frey"
+    ],
+    "Gordon Crosse": [
+      "Gordon Crosse",
+      "Crosse"
+    ],
+    "Gustav Lange": [
+      "Gustav Lange"
+    ],
+    "Gustav Mahler": [
+      "Gustav Mahler",
+      "Mahler"
+    ],
+    "Guy-Manuel de Homem-Christo": [
+      "Guy-Manuel de Homem-Christo"
+    ],
+    "Hank Williams": [
+      "Hank Williams"
+    ],
+    "Harburg": [
+      "Harburg"
+    ],
+    "Heinrich Ignaz Franz von Biber": [
+      "Heinrich Ignaz Franz von Biber",
+      "Biber"
+    ],
+    "Heitor Villa-Lobos": [
+      "Heitor Villa-Lobos",
+      "Villa-Lobos"
+    ],
+    "Henry Litolff": [
+      "Henry Litolff",
+      "Litolff"
+    ],
+    "Henry Mancini": [
+      "Henry Mancini",
+      "Mancini"
+    ],
+    "Henry Walter": [
+      "Henry Walter"
+    ],
+    "Henryk Wieniawski": [
+      "Henryk Wieniawski",
+      "Wieniawski"
+    ],
+    "Herschel Burke Gilbert": [
+      "Herschel Burke Gilbert",
+      "Gilbert"
+    ],
+    "Hoagy Carmichael": [
+      "Hoagy Carmichael"
+    ],
+    "HOAGY CARMICHAEL": [
+      "HOAGY CARMICHAEL"
+    ],
+    "Hu-Wei Huang": [
+      "Hu-Wei Huang",
+      "Huang"
+    ],
+    "Ignacy Jan Paderewski": [
+      "Ignacy Jan Paderewski"
+    ],
+    "Ilhan Ersahin": [
+      "Ilhan Ersahin"
+    ],
+    "Irving Berlin": [
+      "Irving Berlin"
+    ],
+    "Isaac Albéniz": [
+      "Isaac Albéniz",
+      "Albéniz",
+      "Albeniz"
+    ],
+    "J.C. Hopkins": [
+      "J.C. Hopkins"
+    ],
+    "J.P. Pennington": [
+      "J.P. Pennington"
+    ],
+    "Jack Lawrence": [
+      "Jack Lawrence"
+    ],
+    "Jacob Dutton": [
+      "Jacob Dutton"
+    ],
+    "Jacques Offenbach": [
+      "Jacques Offenbach",
+      "Offenbach"
+    ],
+    "Jason 'DaHeala' Quenneville": [
+      "Jason 'DaHeala' Quenneville"
+    ],
+    "Jason Quenneville": [
+      "Jason Quenneville"
+    ],
+    "Jean Francaix": [
+      "Jean Francaix",
+      "Francaix"
+    ],
+    "Jean Sibelius": [
+      "Jean Sibelius",
+      "Sibelius"
+    ],
+    "Jean-Baptiste Lully": [
+      "Jean-Baptiste Lully",
+      "Lully"
+    ],
+    "Jerome Moross": [
+      "Jerome Moross",
+      "Moross"
+    ],
+    "Jerry Livingston": [
+      "Jerry Livingston"
+    ],
+    "Jesse Harris": [
+      "Jesse Harris"
+    ],
+    "Jim Ed Norman": [
+      "Jim Ed Norman"
+    ],
+    "Jimmy Buffett": [
+      "Jimmy Buffett"
+    ],
+    "Jimmy Marinos": [
+      "Jimmy Marinos"
+    ],
+    "Jinyan Zhai": [
+      "Jinyan Zhai",
+      "Zhai"
+    ],
+    "Joe Hisaishi": [
+      "Joe Hisaishi",
+      "Hisaishi"
+    ],
+    "Joe Vitale": [
+      "Joe Vitale"
+    ],
+    "Joe Walsh": [
+      "Joe Walsh"
+    ],
+    "Johann Sebastian Bach": [
+      "Johann Sebastian Bach",
+      "J.S. Bach",
+      "J.S.Bach",
+      "Bach"
+    ],
+    "Johann Strauss I": [
+      "Johann Strauss I",
+      "J. Strauss I"
+    ],
+    "Johann Strauss II": [
+      "Johann Strauss II",
+      "J. Strauss II"
+    ],
+    "Johann Strauss II & Josef Strauss": [
+      "Johann Strauss II & Josef Strauss"
+    ],
+    "Johannes Brahms": [
+      "Johannes Brahms",
+      "Brahms"
+    ],
+    "John D. Loudermilk": [
+      "John D. Loudermilk"
+    ],
+    "John David Souther": [
+      "John David Souther"
+    ],
+    "John Lennon": [
+      "John Lennon"
+    ],
+    "John M. Blackburn": [
+      "John M. Blackburn"
+    ],
+    "Josef Strauss": [
+      "Josef Strauss"
+    ],
+    "Josef Suk": [
+      "Josef Suk",
+      "Suk"
+    ],
+    "José White Lafitte": [
+      "José White Lafitte",
+      "White Lafitte"
+    ],
+    "Jules Massenet": [
+      "Jules Massenet",
+      "Massenet"
+    ],
+    "Justin Hurwitz": [
+      "Justin Hurwitz",
+      "Hurwitz"
+    ],
+    "Kathleen Brennan": [
+      "Kathleen Brennan"
+    ],
+    "Kendrick Lamar": [
+      "Kendrick Lamar"
+    ],
+    "Kenneth Ascher": [
+      "Kenneth Ascher"
+    ],
+    "Kevin Breit": [
+      "Kevin Breit"
+    ],
+    "Kevin Saunderson": [
+      "Kevin Saunderson"
+    ],
+    "Kristen Anderson-Lopez": [
+      "Kristen Anderson-Lopez"
+    ],
+    "Lana Del Rey": [
+      "Lana Del Rey"
+    ],
+    "Larry Grossman": [
+      "Larry Grossman"
+    ],
+    "Lee 'Scratch' Perry": [
+      "Lee 'Scratch' Perry"
+    ],
+    "Lee Alexander": [
+      "Lee Alexander"
+    ],
+    "Leigh Harline": [
+      "Leigh Harline"
+    ],
+    "Leland Wayne": [
+      "Leland Wayne"
+    ],
+    "Leos Janácek": [
+      "Leos Janácek",
+      "Janácek"
+    ],
+    "Lin-Manuel Miranda": [
+      "Lin-Manuel Miranda"
+    ],
+    "Louis Moreau Gottschalk": [
+      "Louis Moreau Gottschalk",
+      "Gottschalk"
+    ],
+    "Louis Spohr": [
+      "Louis Spohr",
+      "Spohr"
+    ],
+    "Ludovico Einaudi": [
+      "Ludovico Einaudi",
+      "Einaudi"
+    ],
+    "Ludwig van Beethoven": [
+      "Ludwig van Beethoven",
+      "Ludwing Van Beethoven",
+      "Beethoven"
+    ],
+    "Luigi Boccherini": [
+      "Luigi Boccherini",
+      "Boccherini"
+    ],
+    "Léon Jessel": [
+      "Léon Jessel"
+    ],
+    "Léo Delibes": [
+      "Léo Delibes",
+      "Delibes"
+    ],
+    "Magnus Hoiberg": [
+      "Magnus Hoiberg"
+    ],
+    "Manuel Ponce": [
+      "Manuel Ponce"
+    ],
+    "Manuel de Falla": [
+      "Manuel de Falla",
+      "de Falla"
+    ],
+    "Marc Olivier Dupin": [
+      "Marc Olivier Dupin"
+    ],
+    "Mariah Carey": [
+      "Mariah Carey"
+    ],
+    "Martin McKinney": [
+      "Martin McKinney"
+    ],
+    "Marty Paich": [
+      "Marty Paich"
+    ],
+    "Matthew Wilder": [
+      "Matthew Wilder"
+    ],
+    "Maurice Gibb": [
+      "Maurice Gibb"
+    ],
+    "Maurice Ravel": [
+      "Maurice Ravel",
+      "Ravel"
+    ],
+    "Max Bruch": [
+      "Max Bruch",
+      "Bruch"
+    ],
+    "Max Martin": [
+      "Max Martin"
+    ],
+    "Max Reger": [
+      "Max Reger",
+      "Reger"
+    ],
+    "Max Richter": [
+      "Max Richter",
+      "Richter"
+    ],
+    "Mejdi Rhars": [
+      "Mejdi Rhars"
+    ],
+    "Michael Jackson": [
+      "Michael Jackson"
+    ],
+    "Mikhail Glinka": [
+      "Mikhail Glinka",
+      "Glinka"
+    ],
+    "Mily Balakirev": [
+      "Mily Balakirev",
+      "Balakirev"
+    ],
+    "Mitchell Parish": [
+      "Mitchell Parish"
+    ],
+    "Modest Mussorgsky": [
+      "Modest Mussorgsky",
+      "Mussorgsky"
+    ],
+    "Moritz Moszkowski": [
+      "Moritz Moszkowski"
+    ],
+    "Musashi Project": [
+      "Musashi Project"
+    ],
+    "Mustafa Ahmed": [
+      "Mustafa Ahmed"
+    ],
+    "Muzio Clementi": [
+      "Muzio Clementi",
+      "Muzio CLEMENTI",
+      "Clementi"
+    ],
+    "Nayvadius Wilburn": [
+      "Nayvadius Wilburn"
+    ],
+    "Ned Washington": [
+      "Ned Washington"
+    ],
+    "Niccolò Paganini": [
+      "Niccolò Paganini",
+      "Paganini"
+    ],
+    "Nikolai Rimsky-Korsakov": [
+      "Nikolai Rimsky-Korsakov",
+      "Nicolai Rimsky-Korsakov",
+      "Rimsky-Korsakov"
+    ],
+    "Nikolai Titov": [
+      "Nikolai Titov",
+      "Titov"
+    ],
+    "Nikolaos Skalkottas": [
+      "Nikolaos Skalkottas",
+      "Skalkottas"
+    ],
+    "Nino Rota": [
+      "Nino Rota",
+      "Rota"
+    ],
+    "Nobuo Uematsu": [
+      "Nobuo Uematsu",
+      "Uematsu"
+    ],
+    "Norah Jones": [
+      "Norah Jones"
+    ],
+    "Not Applicable": [
+      "Not Applicable"
+    ],
+    "Ottorino Respighi": [
+      "Ottorino Respighi",
+      "Respighi"
+    ],
+    "Pablo de Sarasate": [
+      "Pablo de Sarasate",
+      "Sarasate"
+    ],
+    "Paul Dukas": [
+      "Paul Dukas",
+      "Dukas"
+    ],
+    "Paul James": [
+      "Paul James"
+    ],
+    "Paul McCartney": [
+      "Paul McCartney"
+    ],
+    "Pete Solley": [
+      "Pete Solley"
+    ],
+    "Peter Maxwell Davies": [
+      "Peter Maxwell Davies",
+      "Maxwell Davies"
+    ],
+    "Peter Svensson": [
+      "Peter Svensson"
+    ],
+    "Phil Collins": [
+      "Phil Collins"
+    ],
+    "Pietro Antonio Locatelli": [
+      "Pietro Antonio Locatelli"
+    ],
+    "Pyotr Ilyich Tchaikovsky": [
+      "Pyotr Ilyich Tchaikovsky",
+      "Pyotr Illitch Tchakovski",
+      "Pyotr Illitch Tchaikovsky",
+      "Peter Ilyich Tchaikovsky",
+      "Peter Illitch Tchakovski",
+      "Pyotr Llyich Tchaikovsky",
+      "Tschaikovsky",
+      "Tchaikovsky",
+      "Pyotr Il'yich Tchaikovsky",
+      "Pyotr Tchaikovsky",
+      "Pyotr Illitch Tchakovski (1840-1893)",
+      "Pyotr Illitch Tchaïkovski"
+    ],
+    "R. Lawrence": [
+      "R. Lawrence"
+    ],
+    "R. Wake": [
+      "R. Wake"
+    ],
+    "Rene Moore": [
+      "Rene Moore"
+    ],
+    "Richard Hayman": [
+      "Richard Hayman",
+      "Hayman"
+    ],
+    "Richard Julian": [
+      "Richard Julian"
+    ],
+    "Richard Rodney Bennett": [
+      "Richard Rodney Bennett",
+      "Bennett"
+    ],
+    "Ringo Starr": [
+      "Ringo Starr"
+    ],
+    "Robert B. Sherman": [
+      "Robert B. Sherman"
+    ],
+    "Robert Clivilles": [
+      "Robert Clivilles"
+    ],
+    "Robert John Richardson": [
+      "Robert John Richardson"
+    ],
+    "Robert Schumann": [
+      "Robert Schumann",
+      "Schumann"
+    ],
+    "Robin Gibb": [
+      "Robin Gibb"
+    ],
+    "Rod Temperton": [
+      "Rod Temperton",
+      "R. Temperton",
+      "Temperton"
+    ],
+    "Rodion Shchedrin": [
+      "Rodion Shchedrin"
+    ],
+    "ROLAND ORZABAL": [
+      "ROLAND ORZABAL",
+      "Roland Orzabal"
+    ],
+    "Rued Langgaard": [
+      "Rued Langgaard",
+      "Langgaard"
+    ],
+    "Russell Freeman": [
+      "Russell Freeman"
+    ],
+    "Ryuichi Sakamoto": [
+      "Ryuichi Sakamoto",
+      "Sakamoto"
+    ],
+    "samuel Wishkoski": [
+      "samuel Wishkoski"
+    ],
+    "Savan Kotecha": [
+      "Savan Kotecha"
+    ],
+    "Scott Joplin": [
+      "Scott Joplin"
+    ],
+    "Serge Rachmaninoff": [
+      "Serge Rachmaninoff",
+      "Sergei Rachmaninov",
+      "Sergey Rachmaninov",
+      "Rachmaninoff",
+      "Rachmaninov"
+    ],
+    "Sergei Prokofiev": [
+      "Sergei Prokofiev",
+      "Sergei Prokofiev",
+      "Prokofiev"
+    ],
+    "Shanna Jackson": [
+      "Shanna Jackson"
+    ],
+    "Siedah Garrett": [
+      "Siedah Garrett"
+    ],
+    "Sir Edward Elgar": [
+      "Edward Elgar",
+      "Sir Edward Elgar",
+      "Elgar"
+    ],
+    "Sir Harrison Birtwistle": [
+      "Sir Harrison Birtwistle",
+      "Birtwistle"
+    ],
+    "Spoken Word": [
+      "Spoken Word"
+    ],
+    "Stephan Moccio": [
+      "Stephan Moccio"
+    ],
+    "Teddy Riley": [
+      "Teddy Riley"
+    ],
+    "Tekla Bądarzewska-Baranowska": [
+      "Tekla Bądarzewska-Baranowska",
+      "Tekla Badarzewska-Baranowska",
+      "Badarzewska"
+    ],
+    "Teresa Carreno": [
+      "Teresa Carreno",
+      "Carreno"
+    ],
+    "Terry Gilkyson": [
+      "Terry Gilkyson"
+    ],
+    "The Weeknd": [
+      "The Weeknd"
+    ],
+    "Thomas Bangalter": [
+      "Thomas Bangalter"
+    ],
+    "Thomas Pentz": [
+      "Thomas Pentz"
+    ],
+    "Timothy McKenzie": [
+      "Timothy McKenzie"
+    ],
+    "Tom Waits": [
+      "Tom Waits"
+    ],
+    "Tony Ann": [
+      "Tony Ann",
+      "Ann"
+    ],
+    "Townes Van Zandt": [
+      "Townes Van Zandt"
+    ],
+    "Traditional": [
+      "Traditional"
+    ],
+    "Unknown": [
+      "Unknown"
+    ],
+    "Various Composers": [
+      "Various Composers"
+    ],
+    "W. Afanasieff": [
+      "W. Afanasieff"
+    ],
+    "Wally Palamarchuk": [
+      "Wally Palamarchuk"
+    ],
+    "Walter Afanasieff": [
+      "Walter Afanasieff"
+    ],
+    "William Walsh": [
+      "William Walsh"
+    ],
+    "Woldemar Bargiel": [
+      "Woldemar Bargiel"
+    ],
+    "Wolfgang Amadeus Mozart": [
+      "Wolfgang Amadeus Mozart",
+      "Mozart"
+    ],
+    "Yann Tiersen": [
+      "Yann Tiersen",
+      "Tiersen"
+    ],
+    "Yu-Peng Chen": [
+      "Yu-Peng Chen"
+    ],
+    "Zdenek Fibich": [
+      "Zdenek Fibich"
+    ]
+  }
+}

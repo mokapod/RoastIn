@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Library</title>
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+
+<header id="appHeader" class="is-grid">
+  <div class="header-inner">
+    <div class="header-left">
+			<button class="header-btn" id="navBackBtn" title="Go Back">
+				<svg viewBox="0 0 24 24" ...><polyline points="15 18 9 12 15 6"></polyline></svg>
+			</button>
+			<button class="header-btn" id="navForwardBtn" title="Go Forward">
+				<svg viewBox="0 0 24 24" ...><polyline points="9 18 15 12 9 6"></polyline></svg>
+			</button>
+			<button class="sort-cycle" id="sortBtn" type="button" aria-label="Sort by Artist">
+					<span class="sort-cycle-label">Artist</span>
+					<svg class="sort-cycle-icon" viewBox="0 0 24 24" width="18" height="18"
+							 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+							<line x1="4" y1="7" x2="20" y2="7"/>
+							<line x1="4" y1="12" x2="15" y2="12"/>
+							<line x1="4" y1="17" x2="10" y2="17"/>
+					</svg>
+			</button>
+		</div>
+		<div class="header-middle">
+			<div class="header-album-info" id="headerAlbumInfo">
+				<span class="header-album-title" id="headerAlbumTitle"></span>
+				<span class="header-album-artist" id="headerAlbumArtist"></span>
+			</div>
+			<div class="stats-bar" id="stats"></div>
+		</div>
+    <div class="header-right">
+      <div class="search-container" id="searchContainer">
+        <button class="header-btn" id="searchBtn" title="Filter">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        </button>
+        <input type="text" class="search-input" id="searchInput" placeholder="Filter...">
+        <button class="header-btn" id="clearSearchBtn">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <div id="gridView">
+    <div id="content"><div class="loading">Loading library...</div></div>
+  </div>
+  <div id="albumDetailView" class="album-detail">
+    <div id="albumDetailContent"></div>
+  </div>
+  <div id="queueView" class="queue-view">
+		<div id="queueContent"></div>
+	</div>
+</div>
+
+<div id="playbackBar" class="playback-bar">
+  <div class="pb-inner">
+    <div class="pb-left">
+      <div class="pb-cover"><img id="pbImg" src="" alt=""></div>
+      <div class="pb-info" id="pbInfo" title="Click to view album details">
+        <div class="pb-title" id="pbTitle">Not Playing</div>
+        <div class="pb-artist" id="pbArtist">Select a track to begin</div>
+      </div>
+    </div>
+    <div class="pb-middle">
+      <div class="pb-controls">
+        <button class="pb-btn toggle-btn" id="shuffleBtn" title="Shuffle" aria-label="Shuffle">
+          <svg viewBox="0 0 24 24"><path d="M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+        </button>
+        <button class="pb-btn" id="prevBtn" title="Previous">
+          <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+        </button>
+        <button class="pb-btn play-pause" id="pbPlayPauseBtn" title="Play/Pause">
+          <svg viewBox="0 0 24 24" id="playPauseIcon"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+        <button class="pb-btn" id="nextBtn" title="Next">
+          <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+        </button>
+        <button class="pb-btn toggle-btn" id="repeatBtn" title="Repeat" aria-label="Repeat">
+          <svg class="icon-loop" viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
+          <svg class="icon-loop-one" viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/><text x="12" y="15.5" text-anchor="middle" font-size="8" font-weight="700" fill="currentColor" font-family="sans-serif">1</text></svg>
+        </button>
+      </div>
+      <div class="pb-progress-row">
+        <span class="pb-time-current" id="pbTimeCurrent"><span class="pb-time-min">0</span><span class="pb-time-sep">:</span><span class="pb-time-sec">00</span></span>
+        <div class="pb-progress-stack">
+          <canvas id="pbWaveform" class="pb-waveform"></canvas>
+          <input type="range" id="pbProgress" min="0" max="100" value="0" step="0.1">
+        </div>
+        <span class="pb-time-total" id="pbTimeTotal">0:00</span>
+      </div>
+    </div>
+    <div class="pb-right">
+      <div class="hqplayer-audio-pipeline" title="Audio Pipeline">
+        <svg viewBox="1 1 22 22" width="36" height="36">
+          <g stroke="var(--logo-color-main)" fill="none" stroke-width="0.4" opacity="0.15">
+            <circle cx="12" cy="12" r="9.3"/>
+            <circle cx="12" cy="12" r="8.6"/>
+            <circle cx="12" cy="12" r="7.9"/>
+            <circle cx="12" cy="12" r="5.6"/>
+            <circle cx="12" cy="12" r="4.6"/>
+          </g>
+          <circle class="static-ring" cx="12" cy="12" r="10" fill="none" stroke="var(--logo-color-main)" stroke-width="1.5" opacity="0.3"></circle>
+          <circle class="ring ring-1" cx="12" cy="12" r="10" fill="none" stroke="var(--logo-color-main)" stroke-width="1.5"></circle>
+          <circle class="ring ring-2" cx="12" cy="12" r="7" fill="none" stroke="var(--logo-color-main)" stroke-width="1.5"></circle>
+          <circle class="ring ring-3" cx="12" cy="12" r="4" fill="none" stroke="var(--logo-color-accent)" stroke-width="1.5"></circle>
+          <circle cx="12" cy="12" r="2" fill="var(--logo-color-center)" opacity="0.6"></circle>
+        </svg>
+      </div>
+      <button class="hqplayer disconnected" id="hqplayerBtn" aria-haspopup="menu" aria-expanded="false">
+        <img alt="">
+      </button>
+      <button class="vol-btn" id="pbVolumeBtn" title="Toggle Mute">
+        <svg viewBox="0 0 24 24" id="volIcon">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+        </svg>
+        <span class="vol-db-text" id="volDbText"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="hqplayer-menu" id="hqplayerMenu" role="menu" hidden></div>
+
+<!--
+  Load order matters. Each file may reference declarations from earlier files.
+  Do not reorder these <script> tags without checking dependencies.
+-->
+<script src="js/config.js"></script>
+<script src="js/state.js"></script>
+<script src="js/dom.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/aliases.js"></script>
+<script src="js/palette.js"></script>
+<script src="js/workgroup.js"></script>
+<script src="js/library.js"></script>
+<script src="js/notifications.js"></script>
+<script src="js/favorites.js"></script>
+<script src="js/views.js"></script>
+<script src="js/moreby.js"></script>
+<script src="js/transport.js"></script>
+<script src="js/volume.js"></script>
+<script src="js/toggles.js"></script>
+<script src="js/waveform.js"></script>
+<script src="js/progress.js"></script>
+<script src="js/search.js"></script>
+<script src="js/restore.js"></script>
+<script src="js/status.js"></script>
+<script src="js/history.js"></script>
+<script src="js/hotkeys.js"></script>
+<script src="js/menu.js"></script>
+<script src="js/events.js"></script>
+<script src="js/queue.js"></script>
+<script src="js/bootstrap.js"></script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+{
+  "_version": 2,
+
+  "frontend": {
+    "_comment": "Read by the browser. Injected as window.CONFIG by the server.",
+
+    "apiBase": "/api",
+
+    "pollIntervalMs": 1000,
+    "defaultSort": "artist",
+    "searchDebounceMs": 250,
+    "notificationDurationMs": 3000,
+    "hqplayerLaunchTimeoutSec": 30,
+    
+    "watermark": "音",
+
+    "waveform": {
+      "style": "waveform",
+      "bars": { "pitch": 2, "gap": 1, "maxRadius": 1 },
+      "colors": {
+        "_comment_waveform_style": "playedFill = 0.35 for waveform, 0.95 for bars",
+        "unplayedFill":   "rgba(168, 158, 140, 0.35)",
+        "unplayedStroke": "rgba(168, 158, 140, 0.45)",
+        "playedFill":     "rgba(230, 180, 130, 0.35)",
+        "playedStroke":   "rgba(230, 180, 130, 0.95)"
+      }
+    },
+
+    "volume": {
+      "minDb": -60,
+      "maxDb": -3,
+      "stepDb": 3
+    }
+  },
+
+  "server": {
+    "_comment": "Read by the Python backend only. Never sent to the browser.",
+
+    "httpHost": "0.0.0.0",
+    "httpPort": 8080,
+    "hqplayerHost": "127.0.0.1",
+    "hqplayerPort": 4321,
+
+    "hqplayer": {
+      "appName": "HQPlayer6Desktop",
+      "scripts": {
+        "restart":          "restart-hqplayer.sh",
+        "toggle-directsdm": "toggle-directsdm.sh",
+        "prune-favorites":  "prune-favorites.sh",
+				"list-corruptions": "list-corruptions.sh",
+				"repair-library":   "repair-library.sh"
+      }
+    },
+
+    "waveform": {
+      "ffmpegPath": "ffmpeg",
+      "cacheDir": "~/RoastIn/waveform_cache",
+      "points": 1200
+    }
+  }
+}
