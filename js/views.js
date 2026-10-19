@@ -484,6 +484,11 @@ function showQueueView() {
   $detailView.classList.remove('active');
   $queueView.classList.add('active');
 
+  // The queue is only reachable from the keyboard (the Q hotkey), so
+  // move focus to its heading: it announces the view and gives Tab a
+  // sensible starting point ahead of the row list.
+  $queueView.querySelector('.queue-title')?.focus({ preventScroll: true });
+
   $headerTitle.textContent = 'Queue';
   $headerArtist.textContent = '';
   $headerInfo.classList.add('active', 'visible');

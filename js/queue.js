@@ -309,6 +309,10 @@ function positionAfterMove(currentPos, from, to) {
    at the top. */
 let savedQueueScrollPosition = 0;
 
+// Shared empty state. Written by three paths (render, remove, clear) that
+// must leave $queueContent in the same shape.
+const QUEUE_EMPTY_HTML = '<div class="loading is-empty" role="status">The queue is empty.</div>';
+
 /* Last rendered queue contents, in order. Populated by
    renderQueueFromTracks and read by restore.js to resolve the
    currently-playing track in queue mode, where HQPlayer's reported
@@ -361,6 +365,18 @@ async function syncQueueFromServer() {
 
 /* ── Render ── */
 
+/* Scroll restoration for the queue view. window.scrollTo is not scoped
+   to a container, so a view switch during the frame before it fires
+   would land the scroll on whatever view is now showing — hence the
+   isQueueView re-check inside the callback. */
+function restoreQueueScroll(targetScrollY) {
+  if (!(targetScrollY > 0)) return;
+  requestAnimationFrame(() => {
+    if (!isQueueView) return;
+    window.scrollTo(0, targetScrollY);
+  });
+}
+
 async function renderQueueView(restoreTo = null) {
   const internalScrollY = window.scrollY || window.pageYOffset;
   const targetScrollY = (restoreTo !== null) ? restoreTo : internalScrollY;
@@ -411,28 +427,26 @@ async function renderQueueView(restoreTo = null) {
     // Nothing changed — but the scroll restore below still needs to
     // run. The list is where it was; the viewport is where the user
     // left it on the previous visit.
-    if (targetScrollY > 0) {
-      requestAnimationFrame(() => {
-        if (!isQueueView) return;
-        window.scrollTo(0, targetScrollY);
-      });
-    }
+    restoreQueueScroll(targetScrollY);
     return;
   }
 
   renderQueueFromTracks(tracks);
+  restoreQueueScroll(targetScrollY);
+}
 
-  if (targetScrollY > 0) {
-    // Re-check inside the rAF callback as well. A frame can elapse
-    // between this point and the scroll firing, and a view switch
-    // during that window has the same problem — the scroll would
-    // land on the wrong view. Checking twice is cheap and closes
-    // the last gap.
-    requestAnimationFrame(() => {
-      if (!isQueueView) return;
-      window.scrollTo(0, targetScrollY);
-    });
-  }
+// The queue row's accessible name. Kept in one place because the label
+// embeds the position, and reordering renumbers rows without
+// re-rendering them.
+function queueLabelText(name, artist, pos, total, lengthText) {
+  return `${name}${artist ? ` by ${artist}` : ''}, track ${pos} of ${total}, ${lengthText}`;
+}
+
+function queueRowLabel(row, pos, total) {
+  const name = row.querySelector('.track-name')?.textContent || '';
+  const artist = row.querySelector('.track-performer')?.textContent || '';
+  const lengthText = row.querySelector('.track-length')?.textContent || '';
+  return queueLabelText(name, artist, pos, total, lengthText);
 }
 
 function renderQueueFromTracks(tracks) {
@@ -440,14 +454,14 @@ function renderQueueFromTracks(tracks) {
   queueHasRendered = true;
 
   if (tracks.length === 0) {
-    $queueContent.innerHTML = '<div class="loading is-empty">The queue is empty.</div>';
+    $queueContent.innerHTML = QUEUE_EMPTY_HTML;
     return;
   }
 
   const eqIcon = `<svg class="track-icon-eq" viewBox="0 0 24 24" width="16" height="16"><rect class="eq-bar eq-bar-1" x="4" y="12" width="4" height="12" rx="1"/><rect class="eq-bar eq-bar-2" x="10" y="8" width="4" height="16" rx="1"/><rect class="eq-bar eq-bar-3" x="16" y="4" width="4" height="20" rx="1"/></svg>`;
   const playIcon = `<svg class="track-icon-play" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
 
-  let html = '<div class="tracklist-detail">';
+  let html = '<div class="tracklist-detail" role="group" aria-label="Queue tracks">';
   for (let i = 0; i < tracks.length; i++) {
     const t = tracks[i];
     const fallback = (t.uri || '').split('/').pop() || 'Unknown';
@@ -464,8 +478,13 @@ function renderQueueFromTracks(tracks) {
     // No draggable="true" here — reordering is handled by the pointer
     // handlers below. The native drag attribute would put the browser
     // back into the drag subsystem that causes the stuck-hover bug.
+    //
+    // Roving tabindex: one row is reachable by Tab, arrows move within
+    // the list. Without it a long queue is one tab stop per track.
     html += `
-      <div class="track" role="button" tabindex="0" data-queue-index="${i + 1}">
+      <div class="track" role="button" tabindex="${i === 0 ? '0' : '-1'}"
+           data-queue-index="${i + 1}"
+           aria-label="${queueLabelText(song, artist, i + 1, tracks.length, formatTime(length))}">
         <span class="track-play-icon">${eqIcon}${playIcon}</span>
         <span class="track-num">${i + 1}</span>
         <div class="track-art">${artHTML}</div>
@@ -485,6 +504,7 @@ function renderQueueFromTracks(tracks) {
     const el = $queueContent.querySelector(`.track[data-queue-index="${currentNum}"]`);
     if (el) {
       el.classList.add('playing');
+      el.setAttribute('aria-current', 'true');
       if (lastStatus.state !== 'playing') el.classList.add('paused');
     }
   }
@@ -510,10 +530,14 @@ $queueContent.addEventListener('click', async (e) => {
   // Optimistic highlight: give immediate visual feedback before the
   // server confirms. This concerns only the playing indicator, not
   // queue contents, so it lives outside the render-from-server model.
+  // aria-current moves with the class — leaving it on the old row
+  // would keep announcing the previous track as current.
   $queueContent.querySelectorAll('.track').forEach(el => {
     el.classList.remove('playing', 'paused');
+    el.removeAttribute('aria-current');
   });
   track.classList.add('playing');
+  track.setAttribute('aria-current', 'true');
 
   try {
     const res = await fetch(`${API_BASE}/select`, {
@@ -544,16 +568,70 @@ $queueContent.addEventListener('click', async (e) => {
     currentPlayback.album = null;
     currentPlayback.trackIndex = -1;
   } catch {
+    // Roll the optimistic highlight back from lastStatus. Re-rendering
+    // is not enough: renderQueueView skips an unchanged queue, so the
+    // wrong row would stay highlighted until some unrelated transport
+    // frame happened to refresh it.
+    updatePlayingTrackHighlight();
     showNotification('Failed to select track', true);
-    renderQueueView();
   }
 });
 
-$queueContent.addEventListener('keydown', (e) => {
-  if (e.key !== 'Enter' && e.key !== ' ') return;
+// Roving focus for the queue list: Tab reaches one row, arrows move
+// within the list, Enter/Space selects, Alt+Arrow reorders.
+function focusQueueRow(row) {
+  if (!row) return;
+  $queueContent.querySelectorAll('.track[tabindex="0"]').forEach(el => {
+    if (el !== row) el.tabIndex = -1;
+  });
+  row.tabIndex = 0;
+  row.focus();
+}
 
+// Serializes reorder round-trips. Alt+Arrow auto-repeats — the second
+// keydown fires while the first move is still in flight, with the DOM
+// already optimistically renumbered, so its from/to describe a list the
+// server has not confirmed yet. The pointer drop shares the same flag.
+let reorderInFlight = false;
+
+$queueContent.addEventListener('keydown', async (e) => {
   const track = e.target.closest('.track');
   if (!track) return;
+
+  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+    e.preventDefault();
+
+    const rows = Array.from($queueContent.querySelectorAll('.track'));
+    const from = parseInt(track.dataset.queueIndex, 10);
+    if (Number.isNaN(from)) return;
+
+    const to = from + (e.key === 'ArrowDown' ? 1 : -1);
+    if (to < 1 || to > rows.length) return;
+
+    // Alt+Arrow is the keyboard equivalent of the pointer drag. It
+    // reuses performQueueReorder, so the optimistic DOM move, the
+    // server round-trip and the highlight reconciliation are identical.
+    // A held key repeats faster than a round-trip, so a move that is
+    // still in flight drops the repeat rather than queueing it: the
+    // list has already been renumbered optimistically, and a second
+    // from/to computed against it would describe a state the server
+    // has not reached.
+    if (e.altKey) {
+      if (reorderInFlight) return;
+      const moved = await performQueueReorder(from, to);
+      // On success the row sits at `to`; on failure the server's order
+      // replaced the list and the row is back at `from`. Re-query either
+      // way — the previous node may have been replaced by a re-render.
+      const landedAt = moved ? to : from;
+      focusQueueRow($queueContent.querySelector(`.track[data-queue-index="${landedAt}"]`));
+      return;
+    }
+
+    focusQueueRow($queueContent.querySelector(`.track[data-queue-index="${to}"]`));
+    return;
+  }
+
+  if (e.key !== 'Enter' && e.key !== ' ') return;
 
   e.preventDefault();
   const index = parseInt(track.dataset.queueIndex, 10);
@@ -661,14 +739,17 @@ document.addEventListener('mousemove', (e) => {
   pointerDrag.lastTarget = targetRow;
 });
 
-document.addEventListener('mouseup', () => {
-  if (!pointerDrag) return;
+// Shared teardown for the pointer drag, called on mouseup and when the
+// window loses focus mid-gesture. A release outside the window never
+// delivers mouseup, so without this the source row stayed at
+// opacity 0.4, the body kept cursor:grabbing, and the ghost stayed
+// pinned to the screen.
+function endPointerDrag() {
+  if (!pointerDrag) return null;
 
-  const wasActive = pointerDrag.active;
-  const sourceIdx = pointerDrag.sourceIdx;
-  const sourceEl  = pointerDrag.sourceEl;
+  const { active: wasActive, sourceIdx, ghost } = pointerDrag;
+  const sourceEl = pointerDrag.sourceEl;
   const targetRow = dragOverEl;
-  const ghost     = pointerDrag.ghost;
 
   // Clear all drag visual state. Done inline rather than through a
   // helper because this is the only place the state is torn down.
@@ -678,6 +759,15 @@ document.addEventListener('mouseup', () => {
   dragOverEl = null;
   pointerDrag = null;
   if (ghost) ghost.remove();
+
+  return { wasActive, sourceIdx, targetRow };
+}
+
+document.addEventListener('mouseup', () => {
+  const drag = endPointerDrag();
+  if (!drag) return;
+
+  const { wasActive, sourceIdx, targetRow } = drag;
 
   // A press without movement is a click; let the click handler run.
   if (!wasActive) return;
@@ -714,9 +804,20 @@ document.addEventListener('mouseup', () => {
   performQueueReorder(sourceIdx, to);
 });
 
+// A drag that loses the window (released over another app, or the tab
+// backgrounded) never delivers mouseup. Tear the gesture down so no row,
+// cursor or ghost is left stranded.
+window.addEventListener('blur', endPointerDrag);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) endPointerDrag();
+});
+
 /* The reorder logic, extracted from the old drop handler. Runs after
    a pointer drag completes. */
 async function performQueueReorder(from, to) {
+  if (reorderInFlight) return false;
+  reorderInFlight = true;
+
   // HQPlayer's PlaylistMove commands are destructive on a
   // SetTransportPath transport: they empty the queue and stop
   // playback. On a real PlaylistUpload queue they preserve both. The
@@ -724,8 +825,9 @@ async function performQueueReorder(from, to) {
   // is only offered in the safe case.
   if (playbackMode !== 'queue') {
     showNotification('Reordering is only available in queue mode', true);
-    renderQueueView();
-    return;
+    await renderQueueView();
+    reorderInFlight = false;
+    return false;
   }
 
   // Capture transport state before the move. HQPlayer's transport
@@ -762,6 +864,10 @@ async function performQueueReorder(from, to) {
     $queueContent.querySelectorAll('.track').forEach((row, i) => {
       row.dataset.queueIndex = String(i + 1);
       row.querySelector('.track-num').textContent = String(i + 1);
+      // The label carries the position, so it has to be rebuilt here
+      // too. Without this every reordered row announces the position
+      // it had before the move until the next full render.
+      row.setAttribute('aria-label', queueRowLabel(row, i + 1, rows.length));
     });
   }
 
@@ -801,18 +907,20 @@ async function performQueueReorder(from, to) {
 
         updatePlayingTrackHighlight();
 
-        await fetch(`${API_BASE}/select`, {
+        const selectRes = await fetch(`${API_BASE}/select`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ track: newTrackPos })
         });
+        if (!selectRes.ok) throw new Error(`HTTP ${selectRes.status}`);
 
         if (oldTime > 2) {
-          await fetch(`${API_BASE}/seek`, {
+          const seekRes = await fetch(`${API_BASE}/seek`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ time: oldTime })
           });
+          if (!seekRes.ok) throw new Error(`HTTP ${seekRes.status}`);
         }
       }
     }
@@ -833,10 +941,40 @@ async function performQueueReorder(from, to) {
     // resolve against the cache we just refreshed.
     currentPlayback.album = null;
     currentPlayback.trackIndex = -1;
+    return true;
   } catch {
     showNotification('Failed to reorder queue', true);
-    renderQueueView();
+    // Awaited so callers that restore focus afterwards see the final
+    // DOM. renderQueueView replaces innerHTML, so focusing a row that
+    // was captured before this point would land on a detached node.
+    //
+    // The optimistic DOM move is already applied while lastKnownQueue
+    // still holds the server's order, so renderQueueView's
+    // unchanged-queue check would match and skip the rebuild, leaving
+    // the wrong order on screen. Clear the flag to force the refetch to
+    // replace the list.
+    queueHasRendered = false;
+    // /select and /seek can fail after /queue-move succeeded. The move
+    // cannot be undone, so drop the local override rather than keep
+    // announcing a position HQPlayer never reached; the next status
+    // frame re-derives the truth.
+    pendingQueueTrack = null;
+    if (lastStatus) lastStatus.track = oldTrackPos;
+    await renderQueueView();
+    return false;
+  } finally {
+    reorderInFlight = false;
   }
+}
+
+function queueRowMenuItems(track) {
+  const index = parseInt(track.dataset.queueIndex, 10);
+  if (Number.isNaN(index)) return [];
+  return [
+    { label: 'Remove from Queue', action: () => removeFromQueue(index) },
+    { separator: true },
+    { label: 'Clear Queue', danger: true, action: clearQueue }
+  ];
 }
 
 $queueContent.addEventListener('contextmenu', (e) => {
@@ -844,14 +982,23 @@ $queueContent.addEventListener('contextmenu', (e) => {
   if (!track) return;
   e.preventDefault();
 
-  const index = parseInt(track.dataset.queueIndex, 10);
-  if (Number.isNaN(index)) return;
+  const items = queueRowMenuItems(track);
+  if (items.length) showContextMenu(e.clientX, e.clientY, items);
+});
 
-  showContextMenu(e.clientX, e.clientY, [
-    { label: 'Remove from Queue', action: () => removeFromQueue(index) },
-    { separator: true },
-    { label: 'Clear Queue', danger: true, action: clearQueue }
-  ]);
+// Keyboard entry for the same menu, mirroring the grid and detail views.
+$queueContent.addEventListener('keydown', (e) => {
+  if (e.key !== 'ContextMenu' && !(e.shiftKey && e.key === 'F10')) return;
+  const track = e.target.closest('.track');
+  if (!track) return;
+  e.preventDefault();
+
+  const items = queueRowMenuItems(track);
+  if (!items.length) return;
+
+  const rect = track.getBoundingClientRect();
+  showContextMenu(rect.left + 8, rect.bottom - 8, items, track);
+  contextMenuEl?.querySelector('button')?.focus();
 });
 
 async function removeFromQueue(index) {
@@ -880,6 +1027,7 @@ async function removeFromQueue(index) {
       return;
     }
 
+    const rowHadFocus = row.contains(document.activeElement);
     row.remove();
 
     // Renumber the rows that followed the removed one. Only their
@@ -900,6 +1048,24 @@ async function removeFromQueue(index) {
       }
     });
 
+    // Every label carries its position and the queue total, and the
+    // removal changed both for every row after the one removed.
+    const remaining = [...$queueContent.querySelectorAll('.track')];
+    remaining.forEach((r, i) => {
+      r.setAttribute('aria-label', queueRowLabel(r, i + 1, remaining.length));
+    });
+
+    // Roving tabindex: the removed row may have been the only tab
+    // stop. Without a replacement the whole list drops out of the Tab
+    // order and keyboard users cannot get back in.
+    if (remaining.length) {
+      const fallback = remaining[Math.min(index - 1, remaining.length - 1)];
+      if (!$queueContent.querySelector('.track[tabindex="0"]')) {
+        fallback.tabIndex = 0;
+      }
+      if (rowHadFocus) focusQueueRow(fallback);
+    }
+
     // Keep lastKnownQueue in sync so restore.js resolves the playing
     // track against the current queue rather than the pre-removal one.
     if (lastKnownQueue.length >= index) {
@@ -911,8 +1077,7 @@ async function removeFromQueue(index) {
     // message the same way, so both paths leave $queueContent in the
     // same shape.
     if (!$queueContent.querySelector('.track')) {
-      $queueContent.innerHTML =
-        '<div class="loading is-empty">The queue is empty.</div>';
+      $queueContent.innerHTML = QUEUE_EMPTY_HTML;
     }
   } catch {
     showNotification('Failed to remove from queue', true);
@@ -955,11 +1120,12 @@ async function clearQueue() {
     // and the next status poll would resolve the playing track
     // against a queue that no longer exists.
     lastKnownQueue = [];
+    queueHasRendered = false;
 
     // Render the empty state directly rather than refetching, which
     // would hit the same stale server state that clearGracePeriodUntil
     // exists to paper over.
-    $queueContent.innerHTML = '<div class="loading is-empty">The queue is empty.</div>';
+    $queueContent.innerHTML = QUEUE_EMPTY_HTML;
     showNotification('Queue cleared');
   } catch {
     showNotification('Failed to clear queue', true);

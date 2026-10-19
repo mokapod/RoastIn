@@ -791,6 +791,7 @@ function updatePlayingTrackHighlight() {
   if (isQueueView) {
     $queueContent.querySelectorAll('.track').forEach(el => {
       el.classList.remove('playing', 'paused');
+      el.removeAttribute('aria-current');
     });
     if (lastStatus && lastStatus.track) {
       const currentQueueTrack = $queueContent.querySelector(
@@ -798,6 +799,7 @@ function updatePlayingTrackHighlight() {
       );
       if (currentQueueTrack) {
         currentQueueTrack.classList.add('playing');
+        currentQueueTrack.setAttribute('aria-current', 'true');
         if (!currentPlayback.isPlaying) {
           currentQueueTrack.classList.add('paused');
         }

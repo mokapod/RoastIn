@@ -2638,6 +2638,23 @@ header.is-queue {
   margin: 0 auto;
   padding: 1.5rem 2rem 0;
 }
+/* Mobile inset for the queue, declared after the base rule above:
+   media queries add no specificity, so a copy placed earlier in the
+   file loses to the desktop padding no matter the viewport. */
+@media (max-width: 768px) {
+  .queue-view.active { padding: 1.5rem 1rem 0; }
+}
+
+.queue-title {
+  font-size: 1.25rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--text-dim);
+  padding: 0 0 1rem var(--track-pad);
+}
+/* The heading is a programmatic focus target. Suppress the ring only
+   for pointer focus; keyboard users keep a visible indicator. */
+.queue-title:focus:not(:focus-visible) { outline: none; }
 
 /* Narrower number column in queue view — the album art thumbnail
    carries more identifying information than the position. The ghost
