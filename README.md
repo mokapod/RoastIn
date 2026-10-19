@@ -11,6 +11,87 @@ A web-based music library player that fronts HQPlayer, with waveform seek bars, 
 - **Favorites** — pin albums (`favorites.json`).
 - **Keyboard hotkeys** — full keyboard control of playback and navigation.
 
+## Requirements
+
+RoastIn is a front end, not a player. Everything it displays comes from a running
+HQPlayer Desktop on the same Mac, and every command goes back to it.
+
+| Requirement | Needed for | Notes |
+| --- | --- | --- |
+| HQPlayer Desktop, running | everything | The library is HQPlayer's `~/.hqplayer/library.xml`; RoastIn never scans folders itself. |
+| Python 3.9+ | everything | Verified on 3.9.6 (import) and 3.14.6 (full run). Use `brew install python@3.14`; macOS's `/usr/bin/python3` is 3.9 and cannot install packages into itself. |
+| ffmpeg | waveform seek bars | `brew install ffmpeg`. Without it the app runs and waveforms return 503. |
+| numpy | waveform seek bars | Installed by `requirements.txt` into the project venv. |
+| Music files, locally readable | playback + waveforms | HQPlayer plays them; ffmpeg decodes them server-side to compute peaks. |
+| macOS | everything | Developed and run on macOS. `roastin/platform.py` has Linux/Windows fallbacks for opening files and launching apps, but they are untested. |
+
+Disk: the waveform cache holds roughly 1.2 KB of peaks per track — about 6 MB for
+a 4,800-track library — in one SQLite file, pruned after 90 days.
+
+## Installation
+
+One-time setup on a Mac that has never run RoastIn:
+
+```bash
+brew install python@3.14 ffmpeg
+git clone git@github.com:mokapod/RoastIn.git ~/RoastIn
+cd ~/RoastIn
+python3 -m venv .venv
+./.venv/bin/pip install -r requirements.txt
+```
+
+Then:
+
+1. **Install HQPlayer Desktop** and let it index your music. RoastIn is useless
+   until `~/.hqplayer/library.xml` exists and HQPlayer is running.
+2. **Adjust `settings.json`** for this machine — the tracked copy carries the
+   author's values, not yours:
+   - `server.httpHost` / `httpPort` — bind address and port (default `0.0.0.0:8080`).
+   - `server.hqplayerHost` / `hqplayerPort` — where HQPlayer's control port listens (default `127.0.0.1:4321`).
+   - `server.homePath` — only if HQPlayer's `.hqplayer` directory is not under your home directory.
+   - `server.coverRoots` — extra roots cover art may be served from, e.g. an external volume.
+   - `server.hqplayer.appName` — must match the installed HQPlayer (`HQPlayer6Desktop`); `scripts/toggle-directsdm.sh` hardcodes the same name for its AppleScript calls.
+   - `server.waveform.ffmpegPath` — only if ffmpeg is not on `PATH`.
+   - `server.waveform.cacheDir` — `waveforms.sqlite3` is created in this path's
+     **parent** directory, so keep it inside the checkout (`~/RoastIn/waveform_cache`).
+3. **Start the server** — first run creates `.api_token` (mode `600`), validates
+   `library.xml`, prints directory/track counts, and warns about any missing
+   numpy or ffmpeg:
+
+   ```bash
+   ./.venv/bin/python server.py
+   ```
+
+4. **Open the UI** at `http://localhost:8080/RoastIn/index.html`. For a
+   standalone window, Safari → File → Add to Dock; from another device on the
+   same network, use `http://<mac-ip>:8080/RoastIn/index.html`.
+
+The venv is not portable between Macs — recreate it with the two commands above
+rather than copying `.venv/`. `.api_token` is per-machine and regenerates; the
+waveform cache rebuilds as tracks are played.
+
+## Running
+
+```bash
+./.venv/bin/python server.py     # or: source .venv/bin/activate && ./server.py
+```
+
+`./server.py` on its own runs under whatever `python3` is first on `PATH`, which
+is not the venv and has no numpy — waveforms would be unavailable.
+
+- Default bind is `0.0.0.0` — any network device can open the UI.
+- Every `/api/*` request needs an `X-API-Token` header. The page is served with
+  the token already inlined, so a browser works without extra setup; scripts must
+  send it. The token lives in `.api_token` (auto-generated on first start,
+  `chmod 600`, git-ignored — treat it like a password). Set `ROASTIN_API_TOKEN`
+  in the environment to override it (containers, CI).
+- Waveform rendering needs `ffmpeg` (PATH-discoverable) and `numpy` (from
+  `.venv`); without them the app runs fine, just without waveforms. Startup
+  prints a `⚠️  numpy:` / `⚠️  ffmpeg:` line when either is missing.
+- To start at login, wrap the command in a LaunchAgent with `RunAtLoad` and
+  `KeepAlive`, `WorkingDirectory` at the checkout, and `ProgramArguments`
+  pointing at `.venv/bin/python server.py`.
+
 ## Layout
 
 ```
@@ -30,39 +111,20 @@ waveforms.sqlite3  Waveform peak cache (SQLite; created on first run,
                    legacy waveform_cache/ entries imported automatically)
 ```
 
-## Running
-
-The backend runs from a project-local virtualenv, so it never depends on
-whatever Python packages happen to be installed system-wide (and survives a
-Homebrew Python upgrade). Create it once:
-
-```bash
-cd ~/RoastIn
-python3 -m venv .venv
-./.venv/bin/pip install -r requirements.txt
-```
-
-Then start the server with that interpreter:
-
-```bash
-./.venv/bin/python server.py     # or: source .venv/bin/activate && ./server.py
-```
-
-`./server.py` on its own runs under whatever `python3` is first on `PATH` — that
-is the interpreter that has no numpy, so waveforms would be unavailable.
-
-Then open `http://localhost:8080`. Edit `settings.json` to point `httpHost`/`httpPort` at what you want, and set `homePath` if HQPlayer's `.hqplayer` directory is not under your home directory.
-
-Requires a running HQPlayer Desktop instance, since the library and all playback state come from it.
-
-- Default bind is `0.0.0.0` — any network device can open the UI.
-- When not on localhost, every API request needs an `X-API-Token` header. The token lives in `.api_token` (auto-generated on first start, `chmod 600`, git-ignored — treat it like a password).
-- Waveform rendering needs `ffmpeg` (PATH-discoverable) and `numpy` (from `.venv`); without them the app runs fine, just without waveforms. Startup prints a `⚠️  numpy:` / `⚠️  ffmpeg:` line when either is missing.
-
 ## Diagnostics
 
 - `ROASTIN_TIMING=1` logs every timed phase; without it, only phases exceeding their per-phase slow threshold print (`⚠️  SLOW`).
 - Startup validates `library.xml` and prints directory/track counts. On a malformed file (HQPlayer has been observed to write truncated UTF-8), the log names the byte offset and points at `scripts/repair-library.sh`.
+
+## Troubleshooting
+
+- **Every `/api/*` returns 401** — the page is holding a stale token (`.api_token` was deleted or regenerated). Hard-reload the tab.
+- **`⚠️  numpy: No module named 'numpy'`** — the server was started with the wrong interpreter. Use `./.venv/bin/python server.py`.
+- **`⚠️  ffmpeg: …`** — install it (`brew install ffmpeg`) or set `server.waveform.ffmpegPath`.
+- **Empty library** — HQPlayer is not running, has no `library.xml`, or `server.homePath` points somewhere else. Startup prints the track count it found.
+- **Transport does nothing** — HQPlayer's control port is unreachable; check `server.hqplayerHost`/`hqplayerPort` and that HQPlayer Desktop is actually open.
+- **Waveform 403** — the track sits outside the allowed roots; add its volume to `server.coverRoots`.
+- **Address already in use** — an older instance still holds the port: `lsof -tiTCP:8080 -sTCP:LISTEN`.
 
 ## Configuration
 
