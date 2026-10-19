@@ -5,7 +5,7 @@ A web-based music library player that fronts HQPlayer, with waveform seek bars, 
 ## What it does
 
 - **Library browser** — reads HQPlayer's own library (`~/.hqplayer/library.xml`) and serves it as a fast, searchable album/artist/composer view in the browser. RoastIn does not scan your music folders; whatever HQPlayer has indexed is what you see.
-- **HQPlayer control** — play, queue, transport, volume (dB-stepped), and HQPlayer Desktop lifecycle (restart, DirectSDM toggle) via HQPlayer's XML control protocol on its TCP control port (default `4321`).
+- **HQPlayer control** — play, queue, transport, volume (dB-stepped), and HQPlayer lifecycle (restart, DirectSDM toggle) via HQPlayer's XML control protocol on its TCP control port (default `4321`).
 - **Waveform seek bars** — server-side waveform extraction with ffmpeg + numpy, rendered as playable waveform/bar visuals. Peaks persist in a single SQLite database (`waveforms.sqlite3`), imported once from any legacy flat-file cache. Cached per-track (90-day prune).
 - **Artist aliases** — merge artist/composer name variants (`aliases.json`), so "Karl Böhm" and "Karl Boehm" stay one entity.
 - **Favorites** — pin albums (`favorites.json`).
@@ -14,11 +14,11 @@ A web-based music library player that fronts HQPlayer, with waveform seek bars, 
 ## Requirements
 
 RoastIn is a front end, not a player. Everything it displays comes from a running
-HQPlayer Desktop on the same Mac, and every command goes back to it.
+HQPlayer on the same Mac, and every command goes back to it.
 
 | Requirement | Needed for | Notes |
 | --- | --- | --- |
-| HQPlayer Desktop, running | everything | The library is HQPlayer's `~/.hqplayer/library.xml`; RoastIn never scans folders itself. |
+| HQPlayer, running | everything | The library is HQPlayer's `~/.hqplayer/library.xml`; RoastIn never scans folders itself. |
 | Python 3.9+ | everything | Verified on 3.9.6 (import) and 3.14.6 (full run). Use `brew install python@3.14`; macOS's `/usr/bin/python3` is 3.9 and cannot install packages into itself. |
 | ffmpeg | waveform seek bars | `brew install ffmpeg`. Without it the app runs and waveforms return 503. |
 | numpy | waveform seek bars | Installed by `requirements.txt` into the project venv. |
@@ -42,7 +42,7 @@ python3 -m venv .venv
 
 Then:
 
-1. **Install HQPlayer Desktop** and let it index your music. RoastIn is useless
+1. **Install HQPlayer** and let it index your music. RoastIn is useless
    until `~/.hqplayer/library.xml` exists and HQPlayer is running.
 2. **Adjust `settings.json`** for this machine — the tracked copy carries the
    author's values, not yours:
@@ -122,7 +122,7 @@ waveforms.sqlite3  Waveform peak cache (SQLite; created on first run,
 - **`⚠️  numpy: No module named 'numpy'`** — the server was started with the wrong interpreter. Use `./.venv/bin/python server.py`.
 - **`⚠️  ffmpeg: …`** — install it (`brew install ffmpeg`) or set `server.waveform.ffmpegPath`.
 - **Empty library** — HQPlayer is not running, has no `library.xml`, or `server.homePath` points somewhere else. Startup prints the track count it found.
-- **Transport does nothing** — HQPlayer's control port is unreachable; check `server.hqplayerHost`/`hqplayerPort` and that HQPlayer Desktop is actually open.
+- **Transport does nothing** — HQPlayer's control port is unreachable; check `server.hqplayerHost`/`hqplayerPort` and that HQPlayer is actually open.
 - **Waveform 403** — the track sits outside the allowed roots; add its volume to `server.coverRoots`.
 - **Address already in use** — an older instance still holds the port: `lsof -tiTCP:8080 -sTCP:LISTEN`.
 
