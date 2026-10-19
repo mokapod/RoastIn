@@ -40,7 +40,12 @@
   --track-hover:    #241e18;
   --playing:        #d4b483;
 
-  /* ── Layout ── */
+  /* ── Layout ──
+     Two content tiers. --content-max-width governs the surfaces that
+     want the full measure: the album grid, the grid header and the
+     playback bar. --focused-content-max-width governs the single-column
+     reading views — album detail and queue — plus the detail header, so
+     text and chrome share one axis on wide screens. */
   --content-max-width: 1800px;
   --focused-content-max-width: 1200px;
   --content-padding-x: 1rem;
@@ -163,9 +168,10 @@ header.is-grid .header-inner {
   justify-content: center;
 }
 
-/* Grid view: left column holds the sort control at the left edge.
-   The nav buttons are hidden individually — the column itself
-   stays visible so the sort button can flow naturally inside it. */
+/* Grid view: left column holds the sort control at the left edge. The
+   Back control is hidden here — the grid is the app's root view, so
+   there is nowhere to go back to — but the column itself stays visible
+   so the sort button can flow naturally inside it. */
 header.is-grid .header-left {
   position: absolute;
   left: var(--header-pad-x);
@@ -173,8 +179,7 @@ header.is-grid .header-left {
   transform: translateY(-50%);
 }
 
-header.is-grid #navBackBtn,
-header.is-grid #navForwardBtn {
+header.is-grid #navBackBtn {
   display: none;
 }
 
@@ -221,14 +226,13 @@ header.is-detail.is-opaque {
   border-bottom-color: var(--border);
 }
 
-/* Detail view shows Back plus the album title. Forward and search stay
+/* Detail view shows Back plus the album title. Search, sort and stats stay
    hidden; Back floats over the detail tint until the header turns opaque.
    The back button is fixed to the viewport left edge so it aligns with the
    grid header chrome rather than the narrower detail-content boundary. */
 header.is-detail .header-right,
 header.is-detail .header-album-artist,
 header.is-detail .stats-bar,
-header.is-detail #navForwardBtn,
 header.is-detail #sortBtn {
   display: none;
 }
@@ -325,15 +329,6 @@ header.is-queue {
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
-}
-
-/* Pull the forward button toward the back button. The flex gap on
-   .header-left is already 0, so the visible space between the two
-   icons comes entirely from the 10px of padding on the inner side of
-   each 44px button. A negative margin closes most of that without
-   shrinking the outer touch targets. */
-#navForwardBtn {
-  margin-left: -8px;
 }
 
 /* ── Album info (detail view, appears once the on-page copy scrolls away) ── */
@@ -2326,8 +2321,10 @@ header.is-queue {
     position: absolute;
     top: 0;
     bottom: 0;
-    left: var(--track-pad);
-    width: var(--num-w);
+    /* The icon box is wider than the number's, so it starts half the
+       difference to the left and stays centred on the number slot. */
+    left: calc(var(--track-pad) - (var(--icon-w) - var(--num-w)) / 2);
+    width: var(--icon-w);
     pointer-events: none;
   }
   .track.playing .track-num {

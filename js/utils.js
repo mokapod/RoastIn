@@ -279,14 +279,21 @@ function normalizeAlbumName(s) {
 
 function updateNavButtons() {
   // Queue view is a keyboard-only overlay — it never touches history,
-  // so Back/Forward would navigate away from a view the user hasn't
-  // actually left. Both buttons stay disabled while it's open.
+  // so Back would navigate away from a view the user hasn't actually
+  // left. The button stays disabled while it's open.
   if (isQueueView) {
     $navBackBtn.classList.add('disabled');
-    $navFwdBtn.classList.add('disabled');
     return;
   }
 
   $navBackBtn.classList.toggle('disabled', historyCursor <= 0);
-  $navFwdBtn .classList.toggle('disabled', historyCursor >= historyMax);
 }
+
+/* Track-row state icons. The album tracklist (views.js) and the queue
+   (queue.js) render the same pair, so they live here rather than being
+   duplicated per renderer. Size and colour are set in CSS — the markup
+   carries no width/height so the token values stay the single source. */
+const TRACK_EQ_ICON =
+  `<svg class="track-icon-eq" viewBox="0 0 24 24"><rect class="eq-bar eq-bar-1" x="4" y="12" width="4" height="12" rx="1"/><rect class="eq-bar eq-bar-2" x="10" y="8" width="4" height="16" rx="1"/><rect class="eq-bar eq-bar-3" x="16" y="4" width="4" height="20" rx="1"/></svg>`;
+const TRACK_PLAY_ICON =
+  `<svg class="track-icon-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;

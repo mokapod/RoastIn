@@ -458,9 +458,6 @@ function renderQueueFromTracks(tracks) {
     return;
   }
 
-  const eqIcon = `<svg class="track-icon-eq" viewBox="0 0 24 24"><rect class="eq-bar eq-bar-1" x="4" y="12" width="4" height="12" rx="1"/><rect class="eq-bar eq-bar-2" x="10" y="8" width="4" height="16" rx="1"/><rect class="eq-bar eq-bar-3" x="16" y="4" width="4" height="20" rx="1"/></svg>`;
-  const playIcon = `<svg class="track-icon-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
-
   let html = '<div class="tracklist-detail" role="group" aria-label="Queue tracks">';
   for (let i = 0; i < tracks.length; i++) {
     const t = tracks[i];
@@ -485,7 +482,7 @@ function renderQueueFromTracks(tracks) {
       <div class="track" role="button" tabindex="${i === 0 ? '0' : '-1'}"
            data-queue-index="${i + 1}"
            aria-label="${queueLabelText(song, artist, i + 1, tracks.length, formatTime(length))}">
-        <span class="track-play-icon">${eqIcon}${playIcon}</span>
+        <span class="track-play-icon">${TRACK_EQ_ICON}${TRACK_PLAY_ICON}</span>
         <span class="track-num">${i + 1}</span>
         <div class="track-art">${artHTML}</div>
         <div class="track-info">

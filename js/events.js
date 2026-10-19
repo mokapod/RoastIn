@@ -99,7 +99,6 @@ $content.addEventListener('keydown', (e) => {
    ═══════════════════════════════════════════════════════════════════ */
 
 $navBackBtn.addEventListener('click', () => window.history.back());
-$navFwdBtn.addEventListener('click', () => window.history.forward());
 
 $prevBtn.addEventListener('click', () => { if (!tryLocalSkip(-1)) sendCommand('prev'); });
 $pbPlayPauseBtn.addEventListener('click', togglePlayPause);

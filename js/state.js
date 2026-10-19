@@ -214,12 +214,11 @@ let detailScrollPositions = new Map();
    ═══════════════════════════════════════════════════════════════════
    The browser's history stack is opaque — no API exposes its depth or
    cursor. We tag each entry we push with its own index and mirror the
-   browser's cursor here, so Back/Forward button enablement can be
-   derived without querying the browser.
+   browser's cursor here, so Back enablement can be derived without
+   querying the browser.
    ────────────────────────────────────────────────────────────────── */
 
 let historyCursor = 0;   // index of the entry we're currently on
-let historyMax    = 0;   // highest index ever pushed; no forward entries exist past this
 
 /* ═══════════════════════════════════════════════════════════════════
    VOLUME

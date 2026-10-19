@@ -93,8 +93,6 @@ function computeTracklistHTML(album, opts) {
   // no disc header, so their works sit directly under the h1 as h2.
   const workHeadingTag = isMultiDisc ? 'h3' : 'h2';
 
-  const eqIcon   = `<svg class="track-icon-eq" viewBox="0 0 24 24"><rect class="eq-bar eq-bar-1" x="4" y="12" width="4" height="12" rx="1"/><rect class="eq-bar eq-bar-2" x="10" y="8" width="4" height="16" rx="1"/><rect class="eq-bar eq-bar-3" x="16" y="4" width="4" height="20" rx="1"/></svg>`;
-  const playIcon = `<svg class="track-icon-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
 
   function renderTrack(entry, workDisplay, hideArtist, showComposerAbove) {
     const t   = entry.track;
@@ -132,7 +130,7 @@ function computeTracklistHTML(album, opts) {
 			data-track-index="${entry.globalIndex}"
 			data-album-folder="${esc(album.folder)}"
 			aria-label="${safeTitle}${workCtx} by ${ariaArtist}, ${trackPos}, ${duration}">
-        <span class="track-play-icon">${eqIcon}${playIcon}</span>
+        <span class="track-play-icon">${TRACK_EQ_ICON}${TRACK_PLAY_ICON}</span>
         <span class="track-num">${num}</span>
         <div class="track-info">
           ${composerTag}

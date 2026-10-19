@@ -31,6 +31,21 @@ document.addEventListener('keydown', (e) => {
   // double-fire.
   if (e.defaultPrevented) return;
 
+  // Escape leaves the album detail view, mirroring the Back control.
+  // Surfaces that own the key while they are open — the HQPlayer menu, a
+  // context menu, the More-by picker — dismiss themselves first, so only
+  // act when none of them is showing.
+  if (e.key === 'Escape' && isDetailView) {
+    const hqMenu = document.getElementById('hqplayerMenu');
+    if (hqMenu && !hqMenu.hidden) return;
+    if (document.querySelector('.context-menu, .more-by-picker-backdrop')) return;
+
+    e.preventDefault();
+    if (historyCursor > 0) window.history.back();
+    else                   showGridView();
+    return;
+  }
+
   // The F7–F12 transport hotkeys require Shift+Ctrl+Alt+Cmd to avoid
   // colliding with the browser's own F-key bindings (F5 reload, F11
   // fullscreen, F12 DevTools) and with OS media keys. On macOS, F-keys

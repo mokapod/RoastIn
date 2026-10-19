@@ -8,7 +8,6 @@
 const $header      = document.querySelector('header');
 const $playbackBar = document.getElementById('playbackBar');
 const $navBackBtn  = document.getElementById('navBackBtn');
-const $navFwdBtn   = document.getElementById('navForwardBtn');
 const $pipeline    = document.querySelector('.hqplayer-audio-pipeline');
 const $hqBtn       = document.getElementById('hqplayerBtn');
 const $pbRight     = document.querySelector('.pb-right');

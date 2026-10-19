@@ -6,8 +6,8 @@
    ═══════════════════════════════════════════════════════════════════
    The browser's history stack is opaque — we can't ask it how many
    entries exist or where the cursor sits. We tag each entry we push
-   with an index and track the cursor ourselves. Back/Forward
-   enablement is then derived from these, matching browser semantics.
+   with an index and track the cursor ourselves. Back enablement is then
+   derived from that, matching browser semantics.
    ────────────────────────────────────────────────────────────────── */
 
 if ('scrollRestoration' in history) {
@@ -17,14 +17,12 @@ if ('scrollRestoration' in history) {
 function initializeHistory() {
   history.replaceState({ view: 'grid', index: 0 }, '');
   historyCursor = 0;
-  historyMax    = 0;
 }
 
 function pushHistoryEntry(state) {
   const index = historyCursor + 1;
   history.pushState({ ...state, index }, '');
   historyCursor = index;
-  historyMax    = index;   // pushState truncates any forward entries
 }
 
 function replaceHistoryEntry(state) {
