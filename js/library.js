@@ -74,9 +74,9 @@ function appendNextChunk() {
     // No play overlay: the card is a pure navigational tile. Playback
     // is reached from the album detail page or the track rows.
     cardsHTML += `
-      <div class="album-card" role="button" tabindex="0"
-           aria-label="${safeTitle} by ${safeArtist}"
-           data-album-index="${i}">
+      <div class="album-card" role="button" tabindex="${i === 0 ? '0' : '-1'}"
+           aria-label="${safeTitle} by ${safeArtist}, album ${i + 1} of ${currentAlbumsToRender.length}"
+           data-album-index="${i}" data-album-folder="${esc(album.folder)}">
         <div class="album-cover-wrapper">
           <div class="album-cover">
             ${imgHTML}
@@ -181,40 +181,80 @@ function groupAlbums(directories) {
       if (c) composers.add(c);
     }
     album.showComposer = composers.size >= 2;
+    album.searchText = [
+      album.baseName,
+      album.artist,
+      album.year,
+      album.genre,
+      album.composer,
+    ].join('\n').toLowerCase();
   });
 
   return Array.from(albumMap.values());
 }
 
+let sortedAlbumCacheSource = null;
+const sortedAlbumCache = new Map();
+let lastFilterSource = null;
+let lastFilterSort = '';
+let lastFilterQuery = '';
+let lastFilterResult = [];
+
 function sortAlbums(albums, sortBy) {
+  if (sortedAlbumCacheSource !== albums) {
+    sortedAlbumCacheSource = albums;
+    sortedAlbumCache.clear();
+  }
+  if (sortedAlbumCache.has(sortBy)) return sortedAlbumCache.get(sortBy);
+
   const sorted = [...albums];
+  let result;
   switch (sortBy) {
-    case 'artist': return sorted.sort((a, b) => a.artist.localeCompare(b.artist));
-    case 'title':  return sorted.sort((a, b) => a.baseName.localeCompare(b.baseName));
+    case 'artist': result = sorted.sort((a, b) => a.artist.localeCompare(b.artist)); break;
+    case 'title':  result = sorted.sort((a, b) => a.baseName.localeCompare(b.baseName)); break;
     case 'year':
-      return sorted.sort((a, b) => {
+      result = sorted.sort((a, b) => {
         const yearCmp = (a.year || '0').localeCompare(b.year || '0');
         if (yearCmp !== 0) return yearCmp;
         return a.baseName.localeCompare(b.baseName);
       });
-    default: return sorted;
+      break;
+    default: result = sorted;
   }
+  sortedAlbumCache.set(sortBy, result);
+  return result;
 }
 
-function applyFiltersAndRender() {
-  let displayAlbums = sortAlbums(masterAlbums, currentSort);
-  if (currentSearchQuery) {
-    const query = currentSearchQuery.toLowerCase();
-    displayAlbums = displayAlbums.filter(album => {
-      const title    = album.baseName.toLowerCase();
-      const artist   = album.artist.toLowerCase();
-      const year     = album.year || '';
-      const genre    = (album.genre || '').toLowerCase();
-      const composer = (album.composer || '').toLowerCase();
-      return title.includes(query) || artist.includes(query) || year.includes(query)
-          || genre.includes(query) || composer.includes(query);
-    });
+function applyFiltersAndRender(force = false) {
+  // The detail and queue views both keep numeric indices into allAlbums.
+  // Replacing that array underneath either view can silently repoint an
+  // action at another album. Remember the request and render it when the
+  // grid becomes active again. The alias-reaggregation path passes force
+  // because it immediately re-resolves the open detail by stable folder.
+  if (!force && (isDetailView || isQueueView)) {
+    gridRenderPending = true;
+    return;
   }
+  gridRenderPending = false;
+
+  let displayAlbums = sortAlbums(masterAlbums, currentSort);
+  const query = currentSearchQuery.toLowerCase();
+  if (query) {
+    // When a query grows one character at a time, filter the previous
+    // result instead of walking the full library again. Shrinking or
+    // changing the sort correctly falls back to the cached sorted list.
+    const canNarrowPrevious = lastFilterSource === masterAlbums
+      && lastFilterSort === currentSort
+      && lastFilterQuery.length > 0
+      && query.startsWith(lastFilterQuery);
+    const source = canNarrowPrevious ? lastFilterResult : displayAlbums;
+    displayAlbums = source.filter(album => album.searchText.includes(query));
+  }
+  lastFilterSource = masterAlbums;
+  lastFilterSort = currentSort;
+  lastFilterQuery = query;
+  lastFilterResult = displayAlbums;
+  renderedSearchQuery = query;
   allAlbums = displayAlbums;
   renderAlbumGrid(displayAlbums);
 
@@ -238,8 +278,17 @@ function applyAriaLabels(container) {
 }
 
 function renderAlbumGrid(albumsToRender) {
+  // A new render invalidates the old sentinel, even for an empty result.
+  // Disconnect first so the observer cannot append from the previous
+  // snapshot after the old grid has been discarded.
+  if (gridObserver) gridObserver.disconnect();
+  if (currentSentinel) currentSentinel.remove();
+  currentSentinel = null;
+  currentAlbumsToRender = albumsToRender;
+  renderOffset = 0;
+
   if (albumsToRender.length === 0) {
-    $content.innerHTML = '<div class="loading is-empty">No albums found matching your search.</div>';
+    $content.innerHTML = '<div class="loading is-empty" role="status">No albums found matching your search.</div>';
     $stats.innerHTML = '';
     return;
   }
@@ -252,28 +301,25 @@ function renderAlbumGrid(albumsToRender) {
     totalTime += albumsToRender[i].totalDuration;
   }
 
-  // Reset chunking state for this new render cycle (search, sort, or
-  // the initial load).
-  currentAlbumsToRender = albumsToRender;
-  renderOffset = 0;
-
   // Fresh grid container — the previous one is discarded entirely.
-  $content.innerHTML = '<div class="album-grid" id="albumGrid"></div>';
+  $content.innerHTML = '<div class="album-grid" id="albumGrid" aria-label="Albums"></div>';
 
   $stats.innerHTML = `
-    <div class="stat">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1.5"/></svg>
-      <strong>${albumsToRender.length.toLocaleString()}</strong>
-    </div>
-    <span class="stat-divider"></span>
-    <div class="stat">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V8h4V4h-6z"/></svg>
-      <strong>${totalTracks.toLocaleString()}</strong>
-    </div>
-    <span class="stat-divider"></span>
-    <div class="stat">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-      <strong>${formatTotalTime(totalTime)}</strong>
+    <div class="stats-values" role="status" aria-label="${albumsToRender.length.toLocaleString()} albums, ${totalTracks.toLocaleString()} tracks, ${formatTotalTime(totalTime)}">
+      <div class="stat">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1.5"/></svg>
+        <strong>${albumsToRender.length.toLocaleString()}</strong>
+      </div>
+      <span class="stat-divider"></span>
+      <div class="stat">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V8h4V4h-6z"/></svg>
+        <strong>${totalTracks.toLocaleString()}</strong>
+      </div>
+      <span class="stat-divider"></span>
+      <div class="stat">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        <strong>${formatTotalTime(totalTime)}</strong>
+      </div>
     </div>`;
 
   initGridObserver();
@@ -362,7 +408,10 @@ function findOrRevealAlbum(folder) {
   searchInput.value = '';
   searchContainer.classList.remove('has-content');
   searchContainer.classList.remove('expanded');
-  applyFiltersAndRender();
+  // This is an explicit navigation reveal, not a passive search render:
+  // rebuild even from detail/history, then the caller immediately opens
+  // the requested album by its stable folder.
+  applyFiltersAndRender(true);
 
   // The grid we just rebuilt is unfiltered. Keep history in sync so
   // Back/Forward don't reapply a query we've already discarded.

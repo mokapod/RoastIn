@@ -94,9 +94,17 @@ window.addEventListener('popstate', (event) => {
 
     if (searchInput.value !== q) {
       searchInput.value = q;
-      currentSearchQuery = q;
       searchContainer.classList.toggle('has-content', hasQuery);
       searchContainer.classList.toggle('expanded', hasQuery);
+    }
+
+    // Render whenever the grid does not already reflect this query.
+    // Comparing the input value alone is not enough: a debounced render
+    // cancelled above (or deferred while a detail view was open) leaves
+    // the input and the grid out of step, so Forward would show the
+    // saved query with the unfiltered grid behind it.
+    currentSearchQuery = q;
+    if (renderedSearchQuery !== q.toLowerCase()) {
       applyFiltersAndRender();
     }
 

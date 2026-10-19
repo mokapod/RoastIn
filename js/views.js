@@ -28,9 +28,30 @@ function showGridView() {
   $header.classList.add('is-grid');
   $headerInfo.classList.remove('active', 'visible');
   isDetailView = false;
+  if (gridRenderPending) {
+    // A debounced filter settled while detail/queue was open. Apply it
+    // only after those modes are cleared, then keep the rebuilt grid at
+    // its first result rather than restoring an obsolete scroll offset.
+    savedScrollPosition = 0;
+    applyFiltersAndRender();
+  }
   observeDetailArtist();
   updateNavButtons();
-  requestAnimationFrame(() => { window.scrollTo(0, savedScrollPosition); });
+  requestAnimationFrame(() => {
+    window.scrollTo(0, savedScrollPosition);
+    if (lastKeyboardGridAlbumFolder) {
+      const index = allAlbums.findIndex(
+        album => album.folder === lastKeyboardGridAlbumFolder
+      );
+      if (index !== -1) ensureGridIndexRendered(index);
+      const card = index === -1 ? null : $content.querySelector(
+        `.album-card[data-album-index="${index}"]`
+      );
+      const fallback = $content.querySelector('.album-card');
+      if (card || fallback) focusGridCard(card || fallback);
+      lastKeyboardGridAlbumFolder = null;
+    }
+  });
   updatePlaybackBarMode();
 }
 
@@ -381,11 +402,11 @@ function showAlbumDetail(albumIndex, pushState = true, preserveScroll = false) {
   $header.classList.remove('is-grid', 'is-scrolled', 'is-queue');
 	$header.classList.add('is-detail');
 
-  const albumIndexAtCall = albumIndex;
+  const albumFolderAtCall = album.folder;
   applyAlbumPalette(
     $detailView,
     album.coverUrl,
-    () => currentDetailAlbumIndex === albumIndexAtCall
+    () => allAlbums[currentDetailAlbumIndex]?.folder === albumFolderAtCall
   );
   
   updatePlaybackBarMode();

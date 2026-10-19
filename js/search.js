@@ -15,6 +15,7 @@ const clearSearchBtn  = document.getElementById('clearSearchBtn');
 // has already discarded the query.
 function clearSearch() {
   clearTimeout(searchTimeout);
+  searchTimeout = null;
 
   // If the query was already empty (user opened the search and pressed
   // Escape without typing), there's nothing to re-render — just collapse
@@ -77,7 +78,9 @@ searchInput.addEventListener('input', (e) => {
   }
 
   clearTimeout(searchTimeout);
+  searchTimeout = null;
   searchTimeout = setTimeout(() => {
+    searchTimeout = null;
     applyFiltersAndRender();
 
     // Keep the current grid history entry in sync with the settled query.

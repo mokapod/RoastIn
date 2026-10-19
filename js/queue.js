@@ -25,9 +25,11 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 let contextMenuEl = null;
+let contextMenuReturnFocus = null;
 
-function showContextMenu(x, y, items) {
-  hideContextMenu();
+function showContextMenu(x, y, items, returnFocus = null) {
+  hideContextMenu(false);
+  contextMenuReturnFocus = returnFocus;
 
   contextMenuEl = document.createElement('div');
   contextMenuEl.className = 'context-menu';
@@ -81,11 +83,14 @@ function showContextMenu(x, y, items) {
   contextMenuEl.style.top  = `${top}px`;
 }
 
-function hideContextMenu() {
+function hideContextMenu(restoreFocus = true) {
   if (contextMenuEl) {
     contextMenuEl.remove();
     contextMenuEl = null;
   }
+  const target = contextMenuReturnFocus;
+  contextMenuReturnFocus = null;
+  if (restoreFocus && target?.isConnected) target.focus();
 }
 
 document.addEventListener('mousedown', (e) => {
@@ -107,9 +112,61 @@ document.addEventListener('contextmenu', (e) => {
   }
 });
 
+// Context-menu keyboard key and Shift+F10 expose the same album actions
+// as right-click. The menu opens beside the focused card and moves focus
+// to its first item so it is immediately usable without a pointer.
+$content.addEventListener('keydown', (e) => {
+  if (e.key !== 'ContextMenu' && !(e.shiftKey && e.key === 'F10')) return;
+  const card = e.target.closest('.album-card');
+  if (!card) return;
+  e.preventDefault();
+  const rect = card.getBoundingClientRect();
+  showContextMenu(
+    rect.left + 8,
+    rect.bottom - 8,
+    albumCardMenuItems(card),
+    card
+  );
+  contextMenuEl?.querySelector('button')?.focus();
+});
+
 /* ═══════════════════════════════════════════════════════════════════
    RIGHT-CLICK HANDLERS
    ═══════════════════════════════════════════════════════════════════ */
+
+function resolveAlbumIndexByFolder(folder) {
+  if (!folder) return -1;
+  return allAlbums.findIndex(album => album.folder === folder);
+}
+
+function addAlbumFolderToQueue(folder) {
+  const index = resolveAlbumIndexByFolder(folder);
+  if (index !== -1) addToQueue(index, null);
+}
+
+function revealAlbumFolderByFolder(folder) {
+  const album = masterAlbums.find(item => item.folder === folder);
+  if (!album?.folder) return;
+  fetch(`${API_BASE}/reveal`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path: album.folder })
+  }).catch(() => showNotification('Could not open folder', true));
+}
+
+function albumCardMenuItems(card) {
+  const folder = card.dataset.albumFolder;
+  if (!folder) return [];
+  return [
+    { label: 'Add Album to Queue', action: () => addAlbumFolderToQueue(folder) },
+    { label: 'Reveal Album Folder', action: () => revealAlbumFolderByFolder(folder) }
+  ];
+}
+
+function showAlbumCardMenu(card, x, y) {
+  const items = albumCardMenuItems(card);
+  if (items.length) showContextMenu(x, y, items);
+}
 
 function revealAlbumFolder(albumIndex) {
   const album = allAlbums[albumIndex];
@@ -126,13 +183,7 @@ $content.addEventListener('contextmenu', (e) => {
   if (!card) return;
   e.preventDefault();
 
-  const index = parseInt(card.dataset.albumIndex, 10);
-  if (Number.isNaN(index)) return;
-
-  showContextMenu(e.clientX, e.clientY, [
-    { label: 'Add Album to Queue',  action: () => addToQueue(index, null) },
-    { label: 'Reveal Album Folder', action: () => revealAlbumFolder(index) }
-  ]);
+  showAlbumCardMenu(card, e.clientX, e.clientY);
 });
 
 $detailContent.addEventListener('contextmenu', (e) => {

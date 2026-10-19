@@ -8,23 +8,79 @@
    ALBUM GRID — card click, play overlay, keyboard
    ═══════════════════════════════════════════════════════════════════ */
 
+function resolveCardAlbum(card) {
+  const folder = card?.dataset.albumFolder;
+  if (!folder) return { album: null, index: -1 };
+  const index = allAlbums.findIndex(album => album.folder === folder);
+  return { album: index === -1 ? null : allAlbums[index], index };
+}
+
+function focusGridCard(card) {
+  const current = $content.querySelector('.album-card[tabindex="0"]');
+  if (current && current !== card) current.tabIndex = -1;
+  card.tabIndex = 0;
+  card.focus();
+}
+
+function ensureGridIndexRendered(targetIndex) {
+  while (renderOffset <= targetIndex
+      && renderOffset < currentAlbumsToRender.length) {
+    appendNextChunk();
+  }
+}
+
+function moveGridFocus(card, key) {
+  const currentIndex = Number.parseInt(card.dataset.albumIndex, 10);
+  if (Number.isNaN(currentIndex)) return false;
+
+  const grid = document.getElementById('albumGrid');
+  const columns = grid
+    ? getComputedStyle(grid).gridTemplateColumns.split(' ').length
+    : 1;
+  let next = currentIndex;
+  if (key === 'ArrowRight') next++;
+  else if (key === 'ArrowLeft') next--;
+  else if (key === 'ArrowDown') next += columns;
+  else if (key === 'ArrowUp') next -= columns;
+  else if (key === 'Home') next = 0;
+  else if (key === 'End') next = currentAlbumsToRender.length - 1;
+  else return false;
+
+  next = Math.max(0, Math.min(currentAlbumsToRender.length - 1, next));
+  ensureGridIndexRendered(next);
+  const target = $content.querySelector(`.album-card[data-album-index="${next}"]`);
+  if (target) focusGridCard(target);
+  return true;
+}
+
 $content.addEventListener('click', (e) => {
   const card = e.target.closest('.album-card');
   if (!card) return;
 
-  const index = parseInt(card.dataset.albumIndex, 10);
-  if (!Number.isNaN(index)) showAlbumDetail(index);
+  const { index } = resolveCardAlbum(card);
+  if (index !== -1) {
+    focusGridCard(card);
+    showAlbumDetail(index);
+  }
 });
 
 $content.addEventListener('keydown', (e) => {
-  if (e.key !== 'Enter' && e.key !== ' ') return;
-
   const card = e.target.closest('.album-card');
   if (!card) return;
 
-  e.preventDefault();
-  const index = parseInt(card.dataset.albumIndex, 10);
-  if (!Number.isNaN(index)) showAlbumDetail(index);
+  if (moveGridFocus(card, e.key)) {
+    e.preventDefault();
+    return;
+  }
+
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    const { album, index } = resolveCardAlbum(card);
+    if (index !== -1) {
+      lastKeyboardGridAlbumFolder = album.folder;
+      showAlbumDetail(index);
+    }
+  }
 });
 
 /* ═══════════════════════════════════════════════════════════════════

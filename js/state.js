@@ -171,9 +171,19 @@ let lastSeekTime = 0;
 let currentSort = DEFAULT_SORT;   // 'artist' | 'title' | 'year'
 const SORT_ORDER = ['artist', 'title', 'year'];   // cycle order for the sort button
 
-// Live query text. Distinct from searchInput.value in that it drives
-// filtering — the input can hold text the user hasn't committed yet.
+// Search text changes immediately, while the debounced grid render may be
+// deferred if a detail/queue view opens before the timer fires.
 let currentSearchQuery = '';
+let gridRenderPending = false;
+// The query the grid was last actually rendered with. Null until the
+// first render. popstate compares against this rather than the input
+// value, because the input can hold a query whose render was cancelled
+// or deferred.
+let renderedSearchQuery = null;
+
+// Roving-tabindex focus return. Only keyboard activation sets this, so
+// mouse users are not unexpectedly focused when they return to the grid.
+let lastKeyboardGridAlbumFolder = null;
 
 // Debounce timer for the search input. Cleared before each new
 // keystroke, so applyFiltersAndRender only runs once the user pauses.

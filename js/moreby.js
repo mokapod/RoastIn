@@ -50,7 +50,7 @@ function reindexLibraryAfterAliasChange() {
   // Rebuild the sorted/filtered view. This populates allAlbums with
   // fresh objects and re-renders the grid. It scrolls to 0, which we
   // undo below.
-  applyFiltersAndRender();
+  applyFiltersAndRender(true);
 
   // Re-resolve currentPlayback.album. The track count can change if
   // two previously-separate albums merged into one, so the stored
