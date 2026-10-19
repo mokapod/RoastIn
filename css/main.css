@@ -2747,4 +2747,12 @@ header.is-queue {
   .tracklist-detail:has(.work-group):has(> .track) > .track.playing::before {
     animation: none;
   }
+
+  /* Menus and the notification both animate in. Neither entrance carries
+     information, so both appear immediately. */
+  .context-menu,
+  .hqplayer-menu,
+  .notification {
+    animation: none;
+  }
 }
