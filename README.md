@@ -62,7 +62,17 @@ Then:
    ./.venv/bin/python server.py
    ```
 
-4. **Open the UI** at `http://localhost:8080/RoastIn/index.html`. For a
+4. **Install the login service** after the foreground run works:
+
+   ```bash
+   ./scripts/launchd.sh install
+   ```
+
+   This generates a per-machine LaunchAgent from the checkout's actual path,
+   starts RoastIn now, restarts it after crashes, and starts it at login. It
+   writes logs to `~/Library/Logs/RoastIn/`. Skip this step if you prefer to
+   run the server manually in a terminal.
+5. **Open the UI** at `http://localhost:8080/RoastIn/index.html`. For a
    standalone window, Safari → File → Add to Dock; from another device on the
    same network, use `http://<mac-ip>:8080/RoastIn/index.html`.
 
@@ -88,9 +98,21 @@ is not the venv and has no numpy — waveforms would be unavailable.
 - Waveform rendering needs `ffmpeg` (PATH-discoverable) and `numpy` (from
   `.venv`); without them the app runs fine, just without waveforms. Startup
   prints a `⚠️  numpy:` / `⚠️  ffmpeg:` line when either is missing.
-- To start at login, wrap the command in a LaunchAgent with `RunAtLoad` and
-  `KeepAlive`, `WorkingDirectory` at the checkout, and `ProgramArguments`
-  pointing at `.venv/bin/python server.py`.
+### Login service
+
+```bash
+./scripts/launchd.sh status      # service state, listener and HTTP health
+./scripts/launchd.sh restart     # restart and verify HTTP 200
+./scripts/launchd.sh logs        # follow stdout + stderr; Ctrl-C to stop
+./scripts/launchd.sh uninstall   # unload and remove the generated plist
+```
+
+`install` and `uninstall` are idempotent. The script reads the configured port
+from `settings.json`; it stops an existing RoastIn process on that port but
+refuses to replace an unrelated process. The generated plist is machine-bound
+and lives at `~/Library/LaunchAgents/com.mokapod.roastin.plist`; it is not part
+of the repository. No `sudo` is needed. Logs are intentionally kept when the
+service is uninstalled.
 
 ## Layout
 
@@ -124,7 +146,8 @@ waveforms.sqlite3  Waveform peak cache (SQLite; created on first run,
 - **Empty library** — HQPlayer is not running, has no `library.xml`, or `server.homePath` points somewhere else. Startup prints the track count it found.
 - **Transport does nothing** — HQPlayer's control port is unreachable; check `server.hqplayerHost`/`hqplayerPort` and that HQPlayer is actually open.
 - **Waveform 403** — the track sits outside the allowed roots; add its volume to `server.coverRoots`.
-- **Address already in use** — an older instance still holds the port: `lsof -tiTCP:8080 -sTCP:LISTEN`.
+- **Address already in use** — another process owns port 8080. Check it with `lsof -nP -iTCP:8080 -sTCP:LISTEN`; `./scripts/launchd.sh install` stops an existing RoastIn instance but refuses to replace an unrelated process.
+- **Login service is not running** — run `./scripts/launchd.sh status`, then inspect `~/Library/Logs/RoastIn/stderr.log`; reinstall with `./scripts/launchd.sh install`.
 
 ## Configuration
 
