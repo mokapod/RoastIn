@@ -736,7 +736,7 @@ function updatePlaybackUI() {
 
     if (currentPlayback.album.coverUrl) {
       $pbImg.style.display = '';
-      $pbImg.src = currentPlayback.album.coverUrl;
+      $pbImg.src = coverThumbUrl(currentPlayback.album.coverUrl, 128);
     } else {
       $pbImg.style.display = 'none';
       $pbImg.removeAttribute('src');

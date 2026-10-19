@@ -224,7 +224,7 @@ function computeMoreByRowsHTML(album) {
                    data-album-folder="${esc(a.folder)}"
                    aria-label="${esc(a.baseName)}">
                 <div class="more-by-cover">
-									${a.coverUrl ? `<img src="${esc(a.coverUrl)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : ''}
+									${a.coverUrl ? `<img src="${esc(coverThumbUrl(a.coverUrl, 240))}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : ''}
 								</div>
                 <div class="more-by-title">${esc(normalizeMusicalKey(a.baseName))}</div>
                 <div class="more-by-year">${esc(getYear(a.date) || '')}</div>

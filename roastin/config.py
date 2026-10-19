@@ -113,6 +113,11 @@ MIME_BY_EXT = {
 # memory, so a 5 MB cover becomes ~80 reads of 64 KB.
 COVER_CHUNK_BYTES = 64 * 1024
 
+# Downscaled cover art for /files/?w= requests, kept beside the app the
+# same way the waveform cache is. SQLite rather than a directory of files:
+# one file to back up, prune and inspect, and a BLOB read per hit.
+COVER_CACHE_PATH = str(APP_DIR / 'covers.sqlite3')
+
 # --- waveform ------------------------------------------------------------
 WAVEFORM_CACHE_DIR = _os.path.expanduser(
     SETTINGS['server']['waveform']['cacheDir']

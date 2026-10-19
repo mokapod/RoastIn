@@ -223,6 +223,16 @@ function localPathToUrl(localPath) {
   return '/files/' + path.split('/').filter(s => s.length > 0).map(encodeURIComponent).join('/');
 }
 
+// Cover files are stored at scan resolution — around 1400px, 1-2 MB each
+// — while most of the UI draws them into tiles a fraction of that size.
+// The server renders and caches a thumbnail for ?w=<long edge>, so a grid
+// pass downloads tens of KB per cover instead of megabytes. Only /files/
+// URLs take the parameter; anything else (a remote cover) is left alone.
+function coverThumbUrl(url, width) {
+  if (!url) return '';
+  return url.startsWith('/files/') ? `${url}?w=${width}` : url;
+}
+
 // Disc-suffix patterns, in priority order. Matched against the album
 // name; the first hit determines the base name and the disc number.
 const DISC_PATTERNS = [

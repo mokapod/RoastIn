@@ -8,3 +8,6 @@ waveform_cache/
 waveforms.sqlite3
 waveforms.sqlite3-wal
 waveforms.sqlite3-shm
+covers.sqlite3
+covers.sqlite3-wal
+covers.sqlite3-shm

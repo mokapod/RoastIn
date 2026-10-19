@@ -469,7 +469,7 @@ function renderQueueFromTracks(tracks) {
     const album = findAlbumByUri(t.uri);
     const coverUrl = album && album.coverUrl ? album.coverUrl : '';
     const artHTML = coverUrl
-      ? `<img src="${esc(coverUrl)}" alt="" loading="lazy" onerror="this.remove()">`
+      ? `<img src="${esc(coverThumbUrl(coverUrl, 128))}" alt="" loading="lazy" onerror="this.remove()">`
       : '';
 
     // No draggable="true" here — reordering is handled by the pointer

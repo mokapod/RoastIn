@@ -24,6 +24,7 @@ from roastin.config import (
 )
 from roastin import waveform
 from roastin import waveform_cache
+from roastin import cover_thumbs
 from roastin.http.broker import Broker
 from roastin.http.handler import Handler, ThreadingHTTPServer
 from roastin.hqplayer.status import get_native_status
@@ -85,6 +86,14 @@ def main():
         pruned = waveform.prune_waveform_cache()
         if pruned:
             print(f'   Pruned {pruned} stale waveform cache file(s)')
+
+        # Cover thumbnails are regenerable, so an expired or oversized
+        # cache is simply dropped. Doing it here keeps the covers.sqlite3
+        # file bounded without a maintenance step.
+        expired, evicted = cover_thumbs.prune()
+        if expired or evicted:
+            print(f'   Cover cache: dropped {expired} expired, '
+                  f'{evicted} oversized thumbnails')
 
     threading.Thread(target=_background_prune, name='WaveformPrune',
                      daemon=True).start()

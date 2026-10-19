@@ -21,6 +21,7 @@ from socketserver import ThreadingMixIn
 from urllib.parse import unquote, urlparse
 
 from .. import state
+from .. import cover_thumbs
 from ..config import (
     ALIASES_PATH,
     APP_DIR,
@@ -196,7 +197,7 @@ class Handler(SimpleHTTPRequestHandler):
             self._unauthorized()
             return
 
-        if self._route_get(path):
+        if self._route_get(path, parsed.query):
             return
 
         try:
@@ -271,7 +272,7 @@ class Handler(SimpleHTTPRequestHandler):
         finally:
             broker.unsubscribe(q)
 
-    def _route_get(self, path):
+    def _route_get(self, path, query=''):
         """Handle one GET route. True if the request was answered."""
         if path == '/api/status':
             status = get_native_status()
@@ -304,7 +305,7 @@ class Handler(SimpleHTTPRequestHandler):
             return True
 
         if path.startswith('/files/'):
-            self._serve_cover(path)
+            self._serve_cover(path, query)
             return True
 
         if path in ('/', '', '/index.html', f'/{APP_FOLDER}/',
@@ -335,7 +336,21 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_response(404)
             self.end_headers()
 
-    def _serve_cover(self, path):
+    @staticmethod
+    def _thumb_width(query):
+        """`?w=` as a positive int, or None when absent or unparseable.
+
+        A malformed width is treated as no request rather than an error:
+        the original file still satisfies the image, and a 400 would
+        surface in the console for something the user never typed.
+        """
+        if not query:
+            return None
+        from urllib.parse import parse_qs
+        raw = (parse_qs(query).get('w') or [''])[0]
+        return int(raw) if raw.isdigit() else None
+
+    def _serve_cover(self, path, query=''):
         """Serve cover art from the allowed roots.
 
         The frontend sends the complete absolute path, URL-encoded, so
@@ -347,6 +362,14 @@ class Handler(SimpleHTTPRequestHandler):
         Served unauthenticated for the same reason as the JS and CSS:
         the browser's image loader can't attach the X-API-Token header,
         and cover art is not sensitive.
+
+        `?w=<px>` asks for a thumbnail of that long edge. The grid draws
+        covers into ~211px tiles while the files on disk are ~1400px, so
+        the originals cost about 200 MB per pass through the library and
+        stall paint while the browser decodes them. Thumbnails are
+        generated once with sips and cached in covers.sqlite3; a width
+        outside the sane range, or a render failure, falls back to the
+        original file so the image always resolves.
 
         Response body is streamed in COVER_CHUNK_BYTES chunks via
         shutil.copyfileobj rather than read whole into memory. Peak
@@ -394,6 +417,22 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_response(404)
             self.end_headers()
             return
+
+        # Thumbnail path: a valid ?w= that renders wins over the original.
+        width = self._thumb_width(query)
+        if width:
+            data = cover_thumbs.for_source(resolved, width)
+            if data:
+                self.send_response(200)
+                self.send_header('Content-type', 'image/jpeg')
+                self.send_header('Content-Length', str(len(data)))
+                self.send_header('Cache-Control', 'public, max-age=604800')
+                self.end_headers()
+                try:
+                    self.wfile.write(data)
+                except (BrokenPipeError, ConnectionResetError, OSError):
+                    pass
+                return
 
         ctype = MIME_BY_EXT.get(ext, 'application/octet-stream')
         self.send_response(200)

@@ -43,7 +43,9 @@ function appendNextChunk() {
     const album = currentAlbumsToRender[i];
     const safeTitle    = esc(normalizeMusicalKey(album.baseName));
     const safeArtist   = esc(album.artist);
-    const safeCoverUrl = esc(album.coverUrl);
+    // Grid tiles are ~211px wide; 400 covers 2x displays without
+    // shipping the 1400px original.
+    const safeCoverUrl = esc(coverThumbUrl(album.coverUrl, 400));
 
     let badgeHTML = '';
     const rate     = parseInt(album.rate, 10) || 0;

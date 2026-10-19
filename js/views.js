@@ -301,7 +301,7 @@ function showAlbumDetail(albumIndex, pushState = true, preserveScroll = false) {
   const safeAlbumTitle  = esc(normalizeMusicalKey(album.baseName));
   const safeAlbumArtist = esc(album.artist);
   const safeAlbumGenre  = esc(album.genre);
-  const safeCoverUrl    = esc(album.coverUrl);
+  const safeCoverUrl    = esc(coverThumbUrl(album.coverUrl, 640));
 
   // getFormatDisplay only inspects files[0], so a one-element array is
   // all it needs. Grab the first track of disc 1 (or the first track
@@ -451,7 +451,9 @@ function showAlbumDetail(albumIndex, pushState = true, preserveScroll = false) {
   const albumFolderAtCall = album.folder;
   applyAlbumPalette(
     $detailView,
-    album.coverUrl,
+    // Palette extraction only averages pixels, so the thumbnail is
+    // enough — and it avoids downloading the full cover a second time.
+    coverThumbUrl(album.coverUrl, 240),
     () => allAlbums[currentDetailAlbumIndex]?.folder === albumFolderAtCall
   );
   
