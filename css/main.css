@@ -42,6 +42,7 @@
 
   /* ── Layout ── */
   --content-max-width: 1800px;
+  --focused-content-max-width: 1200px;
   --content-padding-x: 1rem;
 
   /* ── Header metrics — drive tint reach and hit targets ── */
@@ -64,7 +65,7 @@
      :root rather than on .tracklist-detail because the drag ghost is
      cloned to <body> and inherits from there — see queue.js. */
   --track-pad:   1.2rem;      /* .track             padding-left */
-  --icon-w:      1rem;        /* .track-play-icon   width */
+  --icon-w:      1.125rem;     /* .track-play-icon width; 18px at root */
   --col-gap:     1.55rem;   /* matched on .track-play-icon and .track-num */
   --icon-margin: var(--col-gap);     /* .track-play-icon   margin-right */
   --num-w:       0.9rem;      /* .track-num         width */
@@ -192,11 +193,9 @@ header.is-grid .header-right {
   transform: translateY(-50%);
 }
 
-/* ── Detail view layout ──
-   Fixed and inert. The content starts at the top of the viewport and
-   the header lays over it. Nothing in this view is interactive, so
-   the header can be pointer-events: none and clicks pass through to
-   the cover and title beneath. */
+/* Detail view keeps the header surface transparent at the top. Only the
+   Back control is interactive there; the rest of the band remains inert so
+   album artwork and titles beneath it keep their existing hit area. */
 header.is-detail {
   position: fixed;
   top: 0;
@@ -222,25 +221,42 @@ header.is-detail.is-opaque {
   border-bottom-color: var(--border);
 }
 
-/* Detail view shows only the album title. The nav buttons and
-   search are hidden on every viewport: the OS back gesture and the
-   grid view's search cover those needs without duplicating them
-   here. The artist line is dropped too — it's redundant with the
-   page, and its absence is what makes the header fit in a single
-   line at any width. */
-header.is-detail .header-left,
+/* Detail view shows Back plus the album title. Forward and search stay
+   hidden; Back floats over the detail tint until the header turns opaque.
+   The back button is fixed to the viewport left edge so it aligns with the
+   grid header chrome rather than the narrower detail-content boundary. */
 header.is-detail .header-right,
 header.is-detail .header-album-artist,
-header.is-detail .stats-bar {
+header.is-detail .stats-bar,
+header.is-detail #navForwardBtn,
+header.is-detail #sortBtn {
   display: none;
 }
 
-/* With the flanking columns hidden, use one centred flex row for the
-   album title. */
 header.is-detail .header-inner {
+  max-width: var(--focused-content-max-width);
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+/* Fixed independently of the centred inner wrapper, so left is measured
+   from the viewport edge. */
+header.is-detail .header-left {
+  position: fixed;
+  left: var(--header-pad-x);
+  top: calc((var(--header-h) - var(--header-btn)) / 2);
+  transform: none;
+  display: flex;
+  pointer-events: auto;
+}
+
+/* SVG-only floating back control — no background, border or blur. */
+header.is-detail #navBackBtn {
+  background: transparent;
+  border: none;
+  border-radius: 0;
 }
 
 /* Queue view — no header. The queue is a keyboard-driven overlay
@@ -612,9 +628,9 @@ header.is-queue {
    ========================================================================== */
 .album-detail { display: none; }
 .album-detail.active {
-  display: block; max-width: 1200px;
+  display: block; max-width: var(--focused-content-max-width);
   margin: 0 auto;
-  padding: 1.5rem 2rem 0;
+  padding: 1.25rem 2rem 0;
   position: relative;
 }
 
@@ -1186,7 +1202,16 @@ header.is-queue {
   width: var(--icon-w);
   margin-right: var(--icon-margin);
 }
-.track-icon-eq, .track-icon-play { display: none; }
+.track-icon-eq, .track-icon-play {
+  display: none;
+  width: var(--icon-w);
+  height: var(--icon-w);
+  /* The icons are optically bottom-heavy (the eq bars span the full
+     viewBox height, and glyphs sit on the text baseline), so centre them
+     by their painted mass, not their box: a 1px lift aligns their visual
+     centres with the track text. */
+  transform: translateY(-1px);
+}
 
 .track:hover .track-play-icon,
 .track:focus-visible .track-play-icon { opacity: 1; }
@@ -2145,16 +2170,12 @@ header.is-queue {
     gap: 0.5rem;
   }
 
-  /* Nav buttons are dropped from the grid view on mobile. iOS and
-     Android both provide a swipe-from-edge back gesture, and
-     Safari's own chrome has a back control; the app's buttons
-     duplicated those, taking ~80px that sort and search can put to
-     better use. (The detail view hides them on every viewport, in
-     the base header rules — this override applies to the grid.) */
-  #navBackBtn,
-  #navForwardBtn {
-    display: none;
-  }
+  /* Nav buttons are already dropped from the grid view by the base
+     header rules, which hide them on every viewport — iOS and Android
+     provide a swipe-from-edge gesture, and Safari has its own back
+     control, so the grid doesn't need the ~80px they occupy. The detail
+     view keeps its floating Back control on mobile: there is no other
+     in-app way back to the grid, and it costs no header space. */
 
   /* Allow the middle column to shrink below its content's natural
      width. The album title uses white-space: nowrap, which gives it
@@ -2190,9 +2211,21 @@ header.is-queue {
   /* One edge for the whole page. The container keeps a small
      padding and the header's own mobile padding is removed, so the
      header, the tracklist, and the work headers all start at the
-     same x. */
+     same x.
+
+     The cover is narrower than the container and the Back control is
+     tucked toward the left edge, so the two sit side by side with their
+     tops flush instead of the button floating over the artwork. */
   .album-detail.active {
-    padding: 1.5rem 1rem 0;
+    /* 0.5rem + 1px puts the cover's top edge exactly level with the
+       Back icon's, which sits 10px inside its 44px button. */
+    padding: calc(0.5rem + 1px) 1rem 0;
+  }
+
+  /* Pull the Back control closer to the screen edge; the base rule's
+     16px inset is tuned for the desktop header's padding. */
+  header.is-detail .header-left {
+    left: 4px;
   }
 
   /* Stack cover above info. Header padding removed — the
@@ -2207,9 +2240,11 @@ header.is-queue {
   }
 
   /* Cover scales with the viewport up to a cap. Fills the phone
-     width on narrow screens; stops growing on wider ones. */
+     width on narrow screens; stops growing on wider ones. The 56px
+     reserve keeps the centred cover clear of the Back control at the
+     top-left, so the two share a top edge without overlapping. */
   .album-detail-cover {
-    width: min(100%, 320px);
+    width: min(calc(100% - 56px), 300px);
     height: auto;
     aspect-ratio: 1 / 1;
   }
@@ -2634,7 +2669,7 @@ header.is-queue {
 .queue-view { display: none; }
 .queue-view.active {
   display: block;
-  max-width: 1200px;
+  max-width: var(--focused-content-max-width);
   margin: 0 auto;
   padding: 1.5rem 2rem 0;
 }
