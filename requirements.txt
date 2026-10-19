@@ -1,0 +1,18 @@
+# RoastIn backend dependencies.
+#
+# Everything in roastin/ is standard library except numpy, which is only
+# used for waveform peak extraction. Without it the server still runs and
+# /api/waveform returns 503.
+#
+# ffmpeg is the other waveform dependency, but it is a system binary
+# (brew install ffmpeg), not a pip package — it is resolved from PATH or
+# settings.json -> server.waveform.ffmpegPath.
+#
+# Create the project venv once:
+#   python3 -m venv .venv
+#   .venv/bin/pip install -r requirements.txt
+#
+# Then run the server with that interpreter (see README):
+#   ./.venv/bin/python server.py
+
+numpy>=2.0,<3

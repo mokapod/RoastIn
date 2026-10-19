@@ -20,6 +20,8 @@ css/main.css       Styling
 js/                Frontend modules (ES modules, no framework)
 images/            Format/logo icons
 d-din-fonts/       D-DIN font files
+requirements.txt   Pip dependencies (numpy; ffmpeg is a system binary)
+.venv/             Project-local Python venv (created once; not tracked)
 scripts/           HQPlayer helper scripts + library maintenance utilities
 aliases.json       Artist/composer alias map (editable, served read-write)
 favorites.json     Pinned album IDs
@@ -30,9 +32,24 @@ waveforms.sqlite3  Waveform peak cache (SQLite; created on first run,
 
 ## Running
 
+The backend runs from a project-local virtualenv, so it never depends on
+whatever Python packages happen to be installed system-wide (and survives a
+Homebrew Python upgrade). Create it once:
+
 ```bash
-./server.py            # or: python3 server.py
+cd ~/RoastIn
+python3 -m venv .venv
+./.venv/bin/pip install -r requirements.txt
 ```
+
+Then start the server with that interpreter:
+
+```bash
+./.venv/bin/python server.py     # or: source .venv/bin/activate && ./server.py
+```
+
+`./server.py` on its own runs under whatever `python3` is first on `PATH` — that
+is the interpreter that has no numpy, so waveforms would be unavailable.
 
 Then open `http://localhost:8080`. Edit `settings.json` to point `httpHost`/`httpPort` at what you want, and set `homePath` if HQPlayer's `.hqplayer` directory is not under your home directory.
 
@@ -40,7 +57,7 @@ Requires a running HQPlayer Desktop instance, since the library and all playback
 
 - Default bind is `0.0.0.0` — any network device can open the UI.
 - When not on localhost, every API request needs an `X-API-Token` header. The token lives in `.api_token` (auto-generated on first start, `chmod 600`, git-ignored — treat it like a password).
-- Waveform rendering needs `ffmpeg` (PATH-discoverable) and `numpy`; without them the app runs fine, just without waveforms.
+- Waveform rendering needs `ffmpeg` (PATH-discoverable) and `numpy` (from `.venv`); without them the app runs fine, just without waveforms. Startup prints a `⚠️  numpy:` / `⚠️  ffmpeg:` line when either is missing.
 
 ## Diagnostics
 
