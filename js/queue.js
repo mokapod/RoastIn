@@ -144,6 +144,11 @@ function addAlbumFolderToQueue(folder) {
   if (index !== -1) addToQueue(index, null);
 }
 
+function addAlbumTrackToQueue(folder, trackIndex) {
+  const index = resolveAlbumIndexByFolder(folder);
+  if (index !== -1) addToQueue(index, trackIndex);
+}
+
 function revealAlbumFolderByFolder(folder) {
   const album = masterAlbums.find(item => item.folder === folder);
   if (!album?.folder) return;
@@ -168,16 +173,37 @@ function showAlbumCardMenu(card, x, y) {
   if (items.length) showContextMenu(x, y, items);
 }
 
-function revealAlbumFolder(albumIndex) {
-  const album = allAlbums[albumIndex];
-  if (!album || !album.folder) return;
-  fetch(`${API_BASE}/reveal`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ path: album.folder })
-  }).catch(() => showNotification('Could not open folder', true));
+function showDetailCoverMenu(cover, x, y, returnFocus) {
+  const album = masterAlbums.find(item => item.folder === cover.dataset.albumFolder);
+  if (!album?.folder) return;
+  showContextMenu(x, y, [
+    { label: 'Add Album to Queue',  action: () => addAlbumFolderToQueue(album.folder) },
+    { label: 'Reveal Album Folder', action: () => revealFolder(album.folder) }
+  ], returnFocus);
 }
 
+function showDetailTrackMenu(track, x, y, returnFocus) {
+  const folder = track.dataset.albumFolder;
+  const trackIndex = parseInt(track.dataset.trackIndex, 10);
+  if (!folder || Number.isNaN(trackIndex)) return;
+
+  const album = masterAlbums.find(item => item.folder === folder);
+  if (!album) return;
+
+  const trackCount = album.tracks.length;
+  const items = [];
+  if (trackIndex >= 0 && trackIndex < trackCount) {
+    items.push({
+      label: 'Add Track to Queue',
+      action: () => addAlbumTrackToQueue(album.folder, trackIndex)
+    });
+  }
+  items.push({
+    label: 'Add Album to Queue',
+    action: () => addAlbumFolderToQueue(album.folder)
+  });
+  showContextMenu(x, y, items, returnFocus);
+}
 $content.addEventListener('contextmenu', (e) => {
   const card = e.target.closest('.album-card');
   if (!card) return;
@@ -195,38 +221,34 @@ $detailContent.addEventListener('contextmenu', (e) => {
   const cover = e.target.closest('.album-detail-cover');
   if (cover) {
     e.preventDefault();
-
-    if (currentDetailAlbumIndex === -1) return;
-    const albumIndex = currentDetailAlbumIndex;
-
-    showContextMenu(e.clientX, e.clientY, [
-      { label: 'Add Album to Queue',  action: () => addToQueue(albumIndex, null) },
-      { label: 'Reveal Album Folder', action: () => revealAlbumFolder(albumIndex) }
-    ]);
+    showDetailCoverMenu(cover, e.clientX, e.clientY, cover);
     return;
   }
 
   const track = e.target.closest('.track');
   if (!track) return;
   e.preventDefault();
+  showDetailTrackMenu(track, e.clientX, e.clientY, track);
+});
 
-  const albumIndex = parseInt(track.dataset.albumIndex, 10);
-  const trackIndex = parseInt(track.dataset.trackIndex, 10);
-  if (Number.isNaN(albumIndex)) return;
-
-  const items = [];
-  if (!Number.isNaN(trackIndex)) {
-    items.push({
-      label: 'Add Track to Queue',
-      action: () => addToQueue(albumIndex, trackIndex)
-    });
+// Keyboard entry for the detail context menus, mirroring the grid.
+$detailContent.addEventListener('keydown', (e) => {
+  if (e.key !== 'ContextMenu' && !(e.shiftKey && e.key === 'F10')) return;
+  const cover = e.target.closest('.album-detail-cover');
+  if (cover) {
+    e.preventDefault();
+    const rect = cover.getBoundingClientRect();
+    showDetailCoverMenu(cover, rect.left + 8, rect.bottom - 8, cover);
+    contextMenuEl?.querySelector('button')?.focus();
+    return;
   }
-  items.push({
-    label: 'Add Album to Queue',
-    action: () => addToQueue(albumIndex, null)
-  });
-
-  showContextMenu(e.clientX, e.clientY, items);
+  const track = e.target.closest('.track');
+  if (track) {
+    e.preventDefault();
+    const rect = track.getBoundingClientRect();
+    showDetailTrackMenu(track, rect.left + 8, rect.bottom - 8, track);
+    contextMenuEl?.querySelector('button')?.focus();
+  }
 });
 
 /* ═══════════════════════════════════════════════════════════════════

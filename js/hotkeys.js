@@ -84,7 +84,10 @@ document.addEventListener('keydown', (e) => {
         if (!currentPlayback.album) return;
         e.preventDefault();
         const idx = findOrRevealAlbum(currentPlayback.album.folder);
-        if (idx !== -1) showAlbumDetail(idx);
+        if (idx !== -1) {
+          detailFocusOnOpen = true;
+          showAlbumDetail(idx);
+        }
         return;
       }
 

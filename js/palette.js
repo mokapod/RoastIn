@@ -154,21 +154,34 @@ async function extractPalette(coverUrl) {
 
 /* ── Application ─────────────────────────────────────────────────── */
 
+let tintGeneration = 0;
+
 // Apply (or clear) the palette on a target element. Safe to call
-// repeatedly; clears synchronously before the async extraction so
-// there's no flash of the previous album's color.
+// repeatedly. The outgoing tint is faded out via data-tint rather than
+// by clearing the custom properties, so the layer keeps painting the
+// previous gradient while its opacity drops — the same read as the old
+// background transition, without repainting the layer each frame.
 async function applyAlbumPalette(target, coverUrl, isStillValid = () => true) {
   if (!target) return;
 
-  target.style.removeProperty('--album-tint');
-  target.style.removeProperty('--album-glow');
+  const myGeneration = ++tintGeneration;
+  target.removeAttribute('data-tint');
 
   if (!coverUrl) return;
 
   const palette = await extractPalette(coverUrl);
   if (!palette) return;
-  if (!isStillValid()) return;   // album changed during extraction
+  if (!isStillValid() || myGeneration !== tintGeneration) return;
 
   target.style.setProperty('--album-tint', palette.tint);
   target.style.setProperty('--album-glow', palette.glow);
+
+  // Flip the flag on the next frame so the new gradient is painted at
+  // opacity 0 first and fades in, rather than swapping in at whatever
+  // opacity the outgoing fade had reached.
+  requestAnimationFrame(() => {
+    if (myGeneration === tintGeneration && isStillValid()) {
+      target.setAttribute('data-tint', 'on');
+    }
+  });
 }

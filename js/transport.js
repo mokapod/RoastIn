@@ -403,10 +403,17 @@ function restorePlaybackState(previous) {
   }
 }
 
+// Album identity. Two rips of the same title/artist in different
+// folders are distinct albums and must not be conflated — grouping
+// already includes folder in the map key.
+function isSameAlbum(a, b) {
+  return !!a && !!b && a.folder === b.folder;
+}
+
 async function playTrackInHQPlayer(albumIndex, trackIndex) {
   const album = allAlbums[albumIndex];
   const startTrackNumber = trackIndex + 1;
-  const isSameAlbum = currentPlayback.album && currentPlayback.album.baseName === album.baseName && currentPlayback.album.artist === album.artist;
+  const isSameAlbumResult = isSameAlbum(currentPlayback.album, album);
 
   if (!isHQPlayerRunning) {
     const previousPlayback = { ...currentPlayback };
@@ -425,7 +432,7 @@ async function playTrackInHQPlayer(albumIndex, trackIndex) {
     }
   }
 
-  if (isSameAlbum && !transportWasLost()) {
+  if (isSameAlbumResult && !transportWasLost()) {
     const previousTrackIndex = currentPlayback.trackIndex;
     const previousIsPlaying  = currentPlayback.isPlaying;
 
@@ -624,20 +631,27 @@ async function addToQueue(albumIndex, trackIndex) {
   }
 }
 
+let currentDetailPlayState = null;
+
 function syncDetailPlayButton() {
   if (!isDetailView || currentDetailAlbumIndex === -1) return;
 
   const playBtn = $detailContent.querySelector('.album-play-btn');
   if (!playBtn) return;
 
+  const album = allAlbums[currentDetailAlbumIndex];
+  const isThisAlbum = isSameAlbum(currentPlayback.album, album);
+  const isPlaying = isThisAlbum && currentPlayback.isPlaying;
+
+  // The icon and label only change on a state transition. Rebuilding the
+  // SVG subtree on every transport frame is pure parse work, and this
+  // button is off-screen for most of a listening session.
+  if (isPlaying === currentDetailPlayState) return;
+  currentDetailPlayState = isPlaying;
+
   const iconSvg = playBtn.querySelector('svg');
 
-  const album = allAlbums[currentDetailAlbumIndex];
-  const isThisAlbum = currentPlayback.album &&
-                      currentPlayback.album.baseName === album.baseName &&
-                      currentPlayback.album.artist === album.artist;
-
-  if (isThisAlbum && currentPlayback.isPlaying) {
+  if (isPlaying) {
     iconSvg.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
     playBtn.classList.add('is-playing');
     playBtn.setAttribute('aria-label', 'Pause album');
@@ -698,10 +712,7 @@ function updatePlaybackBarMode() {
       ? allAlbums[currentDetailAlbumIndex]
       : null;
 
-    isNowPlayingView = !!(album
-      && currentPlayback.album
-      && currentPlayback.album.baseName === album.baseName
-      && currentPlayback.album.artist === album.artist);
+    isNowPlayingView = isSameAlbum(album, currentPlayback.album);
   }
 
   $playbackBar.classList.toggle('is-hqplayer-down', isDown);
@@ -815,6 +826,7 @@ function updatePlayingTrackHighlight() {
   // old, discarded element.
   if (highlightedTrackEl) {
     highlightedTrackEl.classList.remove('playing', 'paused');
+    highlightedTrackEl.removeAttribute('aria-current');
   }
 
   highlightedTrackEl  = null;
@@ -825,13 +837,16 @@ function updatePlayingTrackHighlight() {
   const folder     = album.folder;
   const trackIndex = String(currentPlayback.trackIndex);
 
-  const trackElement = Array.from(document.querySelectorAll('.track'))
-    .find(el => el.dataset.albumFolder === folder
-             && el.dataset.trackIndex  === trackIndex);
+  // Scope to the detail view: the queue branch above already handles its
+  // own rows, and a document-wide scan mixes the two lists.
+  const trackElement = $detailContent.querySelector(
+    `.track[data-album-folder="${CSS.escape(folder)}"][data-track-index="${trackIndex}"]`
+  );
 
   if (!trackElement) return;
 
   trackElement.classList.add('playing');
+  trackElement.setAttribute('aria-current', 'true');
 
   if (!currentPlayback.isPlaying) {
     trackElement.classList.add('paused');

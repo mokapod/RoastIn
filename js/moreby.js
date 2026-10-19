@@ -438,6 +438,7 @@ async function submitMoreByMerge(label, field, input, backdrop) {
 
     await reloadAliases();
     clearMoreByCache();
+    clearTracklistCache();
     reindexLibraryAfterAliasChange();
   } catch (err) {
     errorEl.textContent = err.message || 'Merge failed';
@@ -469,7 +470,7 @@ $detailContent.addEventListener('click', (e) => {
   openMoreByPicker(label, field, moreByCandidates(label, field, album));
 });
 
-function navigateToMoreByCard(card) {
+function navigateToMoreByCard(card, fromKeyboard = false) {
   const folder = card.dataset.albumFolder;
   if (!folder) return;
 
@@ -479,6 +480,9 @@ function navigateToMoreByCard(card) {
     return;
   }
 
+  // Only arm focus movement once the destination actually resolved, so
+  // a failed lookup cannot leak the flag onto the next unrelated open.
+  if (fromKeyboard) detailFocusOnOpen = true;
   showAlbumDetail(albumIndex);
 }
 
@@ -495,5 +499,5 @@ $detailContent.addEventListener('keydown', (e) => {
   if (!card) return;
 
   e.preventDefault();
-  navigateToMoreByCard(card);
+  navigateToMoreByCard(card, true);
 });

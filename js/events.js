@@ -15,6 +15,16 @@ function resolveCardAlbum(card) {
   return { album: index === -1 ? null : allAlbums[index], index };
 }
 
+// Track rows carry the album folder as well as a numeric index. The
+// index is baked into the cached tracklist HTML, so it goes stale as
+// soon as allAlbums is re-sorted or re-filtered — always resolve by
+// folder for anything that can outlive the render.
+function resolveTrackAlbumIndex(track) {
+  const folder = track?.dataset.albumFolder;
+  if (!folder) return -1;
+  return allAlbums.findIndex(album => album.folder === folder);
+}
+
 function focusGridCard(card) {
   const current = $content.querySelector('.album-card[tabindex="0"]');
   if (current && current !== card) current.tabIndex = -1;
@@ -78,6 +88,7 @@ $content.addEventListener('keydown', (e) => {
     const { album, index } = resolveCardAlbum(card);
     if (index !== -1) {
       lastKeyboardGridAlbumFolder = album.folder;
+      detailFocusOnOpen = true;
       showAlbumDetail(index);
     }
   }
@@ -134,9 +145,7 @@ $detailContent.addEventListener('click', (e) => {
     const album = allAlbums[currentDetailAlbumIndex];
     if (!album) return;
 
-    const isThisAlbum = currentPlayback.album &&
-                        currentPlayback.album.baseName === album.baseName &&
-                        currentPlayback.album.artist === album.artist;
+    const isThisAlbum = isSameAlbum(currentPlayback.album, album);
 
     if (isThisAlbum) togglePlayPause();
     else playTrackInHQPlayer(currentDetailAlbumIndex, 0);
@@ -146,29 +155,31 @@ $detailContent.addEventListener('click', (e) => {
   // 2. Reveal Folder (Cover Click)
   const cover = e.target.closest('.album-detail-cover');
   if (cover) {
-    const folder = cover.dataset.folder;
-    if (folder) {
-      fetch(`${API_BASE}/reveal`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: folder })
-      }).catch(() => showNotification('Could not open folder', true));
-    }
+    revealFolder(cover.dataset.albumFolder);
     return;
   }
 
   // 3. Play Specific Track
   const track = e.target.closest('.track');
   if (track) {
-    const albumIndex = parseInt(track.dataset.albumIndex, 10);
+    const albumIndex = resolveTrackAlbumIndex(track);
     const trackIndex = parseInt(track.dataset.trackIndex, 10);
 
-    if (!Number.isNaN(albumIndex) && !Number.isNaN(trackIndex)) {
+    if (albumIndex !== -1 && !Number.isNaN(trackIndex)) {
       playTrackInHQPlayer(albumIndex, trackIndex);
     }
     return;
   }
 });
+
+function revealFolder(path) {
+  if (!path) return;
+  fetch(`${API_BASE}/reveal`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path })
+  }).catch(() => showNotification('Could not open folder', true));
+}
 
 // Keyboard handler for the two element types in the detail view that
 // aren't real <button> elements and therefore don't fire click on
@@ -180,27 +191,36 @@ $detailContent.addEventListener('click', (e) => {
 // which the delegated click handler above already catches. No keyboard
 // handling is needed for those.
 $detailContent.addEventListener('keydown', (e) => {
-  if (e.key !== 'Enter' && e.key !== ' ') return;
-
   const cover = e.target.closest('.album-detail-cover');
-  if (cover) {
+  const track = e.target.closest('.track');
+
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    // Arrow keys move through the tracklist without activating.
+    // Enter/Space is still required to play a row.
+    if (!track) return;
     e.preventDefault();
-    const folder = cover.dataset.folder;
-    if (!folder) return;
-    fetch(`${API_BASE}/reveal`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path: folder })
-    }).catch(() => showNotification('Could not open folder', true));
+    const rows = Array.from($detailContent.querySelectorAll('.track'));
+    const next = rows.indexOf(track) + (e.key === 'ArrowDown' ? 1 : -1);
+    if (next < 0 || next >= rows.length) return;
+    rows.forEach(row => { row.tabIndex = -1; });
+    rows[next].tabIndex = 0;
+    rows[next].focus();
     return;
   }
 
-  const track = e.target.closest('.track');
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+
+  if (cover) {
+    e.preventDefault();
+    revealFolder(cover.dataset.albumFolder);
+    return;
+  }
+
   if (track) {
     e.preventDefault();
-    const albumIndex = parseInt(track.dataset.albumIndex, 10);
+    const albumIndex = resolveTrackAlbumIndex(track);
     const trackIndex = parseInt(track.dataset.trackIndex, 10);
-    if (!Number.isNaN(albumIndex) && !Number.isNaN(trackIndex)) {
+    if (albumIndex !== -1 && !Number.isNaN(trackIndex)) {
       playTrackInHQPlayer(albumIndex, trackIndex);
     }
   }

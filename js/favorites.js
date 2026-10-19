@@ -19,6 +19,7 @@ async function handleFavoriteClick(e) {
 
   // Optimistic UI
   btn.setAttribute('aria-pressed', next ? 'true' : 'false');
+  btn.setAttribute('aria-label', next ? 'Remove album from favorites' : 'Add album to favorites');
   if (next) favorites.add(hash);
   else      favorites.delete(hash);
 

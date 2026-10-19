@@ -21,6 +21,7 @@ function showGridView() {
   $gridView.style.display = 'block';
   $detailArtist = null;
   $detailView.classList.remove('active');
+  $detailView.removeAttribute('data-tint');
   $detailView.style.removeProperty('--album-tint');
   $detailView.style.removeProperty('--album-glow');
   $header.classList.remove('is-detail', 'is-opaque', 'is-queue');
@@ -59,8 +60,38 @@ function showGridView() {
    TRACKLIST
    ═══════════════════════════════════════════════════════════════════ */
 
-function buildTracklistHTML(album, albumIndex, opts) {
+/* ═══════════════════════════════════════════════════════════════════
+   TRACKLIST HTML CACHE
+   ═══════════════════════════════════════════════════════════════════
+   buildTracklistHTML walks every track, runs work grouping and
+   canonical-name lookups, and builds a large string. That output is
+   deterministic for a given album + alias state, so re-opening an
+   album can be a Map lookup. Cleared whenever aliases change, because
+   the composer/performer labels come from the canonical maps. */
+
+const tracklistCache = new Map();
+const TRACKLIST_CACHE_MAX = 60;
+
+function clearTracklistCache() {
+  tracklistCache.clear();
+}
+
+function buildTracklistHTML(album, opts) {
+  const cached = boundedGet(tracklistCache, album.folder);
+  if (cached !== CACHE_MISS) return cached;
+
+  const html = computeTracklistHTML(album, opts);
+  boundedSet(tracklistCache, album.folder, html, TRACKLIST_CACHE_MAX);
+  return html;
+}
+
+function computeTracklistHTML(album, opts) {
   const { isMultiDisc, showTrackComposer, isVariousArtists, useWorkGrouping } = opts;
+
+  // Heading level tracks the outline: the album title is h1, a multi-disc
+  // album puts disc headers at h2 and works at h3. Single-disc albums have
+  // no disc header, so their works sit directly under the h1 as h2.
+  const workHeadingTag = isMultiDisc ? 'h3' : 'h2';
 
   const eqIcon   = `<svg class="track-icon-eq" viewBox="0 0 24 24" width="16" height="16"><rect class="eq-bar eq-bar-1" x="4" y="12" width="4" height="12" rx="1"/><rect class="eq-bar eq-bar-2" x="10" y="8" width="4" height="16" rx="1"/><rect class="eq-bar eq-bar-3" x="16" y="4" width="4" height="20" rx="1"/></svg>`;
   const playIcon = `<svg class="track-icon-play" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
@@ -83,6 +114,8 @@ function buildTracklistHTML(album, albumIndex, opts) {
     const safeArtist = esc(fArtist);
     const ariaArtist = esc(fArtist || album.artist);
     const workCtx    = workDisplay ? `, from ${esc(workDisplay)}` : '';
+    const trackPos   = `track ${entry.globalIndex + 1} of ${album.tracks.length}`;
+    const duration   = formatTime(length);
 
     const composerForTrack = showComposerAbove ? getTrackComposer(t) : '';
     const composerTag = composerForTrack
@@ -94,11 +127,11 @@ function buildTracklistHTML(album, albumIndex, opts) {
       ? `<div class="track-performer">${esc(fArtist)}</div>`
       : '';
 
-    return `<div class="track${numberInTitle ? ' num-in-title' : ''}" role="button" tabindex="0"
+    return `<div class="track${numberInTitle ? ' num-in-title' : ''}" role="button"
+			tabindex="${entry.globalIndex === 0 ? '0' : '-1'}"
 			data-track-index="${entry.globalIndex}"
-			data-album-index="${albumIndex}"
 			data-album-folder="${esc(album.folder)}"
-			aria-label="${safeTitle}${workCtx} by ${ariaArtist}">
+			aria-label="${safeTitle}${workCtx} by ${ariaArtist}, ${trackPos}, ${duration}">
         <span class="track-play-icon">${eqIcon}${playIcon}</span>
         <span class="track-num">${num}</span>
         <div class="track-info">
@@ -106,7 +139,7 @@ function buildTracklistHTML(album, albumIndex, opts) {
           <div class="track-name">${safeTitle}</div>
           ${performerTag}
         </div>
-        <span class="track-length">${formatTime(length)}</span>
+        <span class="track-length">${duration}</span>
       </div>`;
   }
 
@@ -174,7 +207,7 @@ function buildTracklistHTML(album, albumIndex, opts) {
       return `
         <div class="work-group" data-section="true">
           <div class="work-header">
-            <div class="work-section">${esc(sectionTitle)}</div>
+            <${workHeadingTag} class="work-section">${esc(sectionTitle)}</${workHeadingTag}>
           </div>
           ${tracksHTML}
         </div>`;
@@ -223,7 +256,7 @@ function buildTracklistHTML(album, albumIndex, opts) {
       <div class="work-group">
         <div class="work-header">
           ${eyebrow}
-          <div class="work-title">${esc(normalizedTitle)}</div>
+          <${workHeadingTag} class="work-title">${esc(normalizedTitle)}</${workHeadingTag}>
           ${performerLine}
         </div>
         ${tracksHTML}
@@ -233,7 +266,7 @@ function buildTracklistHTML(album, albumIndex, opts) {
   let html = '';
   for (const g of allGroups) {
     if (isMultiDisc) {
-      html += `<div class="disc-header">Disc ${g.discNumber}</div>`;
+      html += `<h2 class="disc-header">Disc ${g.discNumber}</h2>`;
     }
     html += g.blocks.map(renderBlock).join('');
   }
@@ -244,7 +277,18 @@ function buildTracklistHTML(album, albumIndex, opts) {
    ALBUM DETAIL
    ═══════════════════════════════════════════════════════════════════ */
 
+// Set for keyboard-initiated detail openings and consumed once by
+// showAlbumDetail. Mouse users keep normal visual-only navigation
+// without unexpected focus movement.
+let detailFocusOnOpen = false;
+
 function showAlbumDetail(albumIndex, pushState = true, preserveScroll = false) {
+  const album = allAlbums[albumIndex];
+
+  // Validate before mutating detail state. A stale caller must not leave
+  // the previous page visible with an invalid index used by transport sync.
+  if (!album) return;
+
   const comingFromGrid = pushState && !isDetailView;
 
   if (pushState && isDetailView && currentDetailAlbumIndex !== -1) {
@@ -254,12 +298,7 @@ function showAlbumDetail(albumIndex, pushState = true, preserveScroll = false) {
 
   const scrollBeforeRender = window.scrollY || window.pageYOffset;
   currentDetailAlbumIndex = albumIndex;
-  const album = allAlbums[albumIndex];
-
-  // Guard against a stale index. Callers validate today, but this is a
-  // public-in-module function and a silent undefined deref here would
-  // blank the whole view.
-  if (!album) return;
+  currentDetailPlayState = null;
 
   const safeAlbumTitle  = esc(normalizeMusicalKey(album.baseName));
   const safeAlbumArtist = esc(album.artist);
@@ -294,7 +333,7 @@ function showAlbumDetail(albumIndex, pushState = true, preserveScroll = false) {
     }
   }
 
-  const tracklistHTML = buildTracklistHTML(album, albumIndex, {
+  const tracklistHTML = buildTracklistHTML(album, {
     isMultiDisc,
     showTrackComposer,
     isVariousArtists,
@@ -306,7 +345,7 @@ function showAlbumDetail(albumIndex, pushState = true, preserveScroll = false) {
 
   $detailContent.innerHTML = `
 		<div class="album-detail-header">
-			<div class="album-detail-cover" data-folder="${esc(album.folder)}" role="button" tabindex="0" aria-label="Reveal album folder">
+			<div class="album-detail-cover" data-album-folder="${esc(album.folder)}" role="button" tabindex="0" aria-label="Reveal album folder">
 				${safeCoverUrl ? `<img src="${safeCoverUrl}" alt="" onerror="this.parentElement.innerHTML='🎼'">` : '🎼'}
 			</div>
 			<div class="album-detail-info">
@@ -314,14 +353,14 @@ function showAlbumDetail(albumIndex, pushState = true, preserveScroll = false) {
 					${album.date ? `<span class="album-detail-year">${getYear(album.date)}</span>` : ''}
 				</div>
 				<div class="album-detail-middle">
-					<div class="album-detail-title">${safeAlbumTitle}</div>
+					<h1 class="album-detail-title" tabindex="-1">${safeAlbumTitle}</h1>
 					<div class="album-detail-artist">${safeAlbumArtist}</div>
 					<div class="album-detail-meta">
 						<span class="format-display">${getFormatDisplay(album.rate, album.bits, album.channels, firstTrack ? [firstTrack] : [])}</span>
 						${album.genre ? `<span class="badge badge-genre">${safeAlbumGenre}</span>` : ''}
 					</div>
 					<div class="album-detail-stats">
-						${isMultiDisc ? `${numDiscs} ${numDiscs === 1 ? 'disc' : 'discs'} · ` : ''}
+						${isMultiDisc ? `${numDiscs} discs · ` : ''}
 						${album.tracks.length} track${album.tracks.length === 1 ? '' : 's'} · ${formatTotalTime(album.totalDuration)}
 					</div>
 				</div>
@@ -334,7 +373,7 @@ function showAlbumDetail(albumIndex, pushState = true, preserveScroll = false) {
 					<button class="album-detail-fav"
 									data-album-hash="${esc(album.hash)}"
 									aria-pressed="${initialFavState}"
-									aria-label="Favorite album">
+									aria-label="${initialFavState === 'true' ? 'Remove album from favorites' : 'Add album to favorites'}">
 						<svg viewBox="0 0 24 24" width="22" height="22">
 							<path class="heart-outline" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/>
 							<path class="heart-solid" d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z"/>
@@ -343,7 +382,7 @@ function showAlbumDetail(albumIndex, pushState = true, preserveScroll = false) {
 				</div>
 			</div>
 		</div>
-		<div class="tracklist-detail">${tracklistHTML}</div>
+		<div class="tracklist-detail" role="group" aria-label="Tracklist">${tracklistHTML}</div>
 		${moreByHTML}
 	`;
 
@@ -380,9 +419,18 @@ function showAlbumDetail(albumIndex, pushState = true, preserveScroll = false) {
     requestAnimationFrame(() => window.scrollTo(0, restoreY));
   }
 
-  updatePlayingTrackHighlight();
   isDetailView = true;
+  updatePlayingTrackHighlight();
   syncDetailPlayButton();
+
+  // Keyboard-opened views begin with the heading focused and announced.
+  // Mouse users keep normal visual-only navigation without focus movement.
+  // focusOnOpen is consumed once so back-navigation does not re-focus.
+  if (detailFocusOnOpen) {
+    detailFocusOnOpen = false;
+    const heading = $detailContent.querySelector('.album-detail-title');
+    heading?.focus({ preventScroll: true });
+  }
 
   if (pushState) {
     pushHistoryEntry({
@@ -417,7 +465,9 @@ function showQueueView() {
 
   queueReturnState = {
     wasDetail: isDetailView,
-    albumIndex: currentDetailAlbumIndex,
+    albumFolder: isDetailView && currentDetailAlbumIndex !== -1
+      ? allAlbums[currentDetailAlbumIndex]?.folder ?? null
+      : null,
     scrollY
   };
 
@@ -465,10 +515,17 @@ function hideQueueView() {
   isQueueView = false;
   $queueView.classList.remove('active');
 
-  if (state && state.wasDetail && state.albumIndex !== -1) {
-    showAlbumDetail(state.albumIndex, false, true);
-    requestAnimationFrame(() => window.scrollTo(0, state.scrollY));
-  } else {
+  if (state && state.wasDetail && state.albumFolder) {
+    const idx = findOrRevealAlbum(state.albumFolder);
+    if (idx !== -1) {
+      showAlbumDetail(idx, false, true);
+      requestAnimationFrame(() => window.scrollTo(0, state.scrollY));
+      return;
+    }
+    // The album is gone (library rebuild). Fall back to the grid without
+    // restoring the detail view's scroll offset onto a different page.
     showGridView();
+    return;
   }
+  showGridView();
 }

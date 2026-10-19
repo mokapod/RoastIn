@@ -116,6 +116,10 @@ body {
 }
 
 ::-webkit-scrollbar { display: none; }
+/* Firefox equivalent. Without it, scrollbars take layout width there,
+   and the detail view's full-bleed tint (which measures against 100vw)
+   overshoots by half the scrollbar. */
+html { scrollbar-width: none; }
 
 
 /* ==========================================================================
@@ -584,10 +588,6 @@ header.is-queue {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.9;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .album-card { transition: none; }
-  .album-card:hover { transform: none; }
-}
 
 
 /* ==========================================================================
@@ -618,11 +618,19 @@ header.is-queue {
   position: relative;
 }
 
-/* Per-album tint — extracted from the cover by palette.js. Both
-   gradients sit behind the content and fade to transparent well
-   before reaching the text. `screen` blend means they can only
-   ever lighten, never darken, so the text stays readable. */
-.album-detail.active::before {
+/* Per-album tint — extracted from the cover by palette.js. Two
+   stacked layers: tint underneath, glow on top, both fading to
+   transparent well before reaching the text. Their alpha is low
+   enough (0.10/0.16) that the underlying dark surface dominates and
+   text stays readable.
+
+   Split into two pseudo-elements and driven by opacity rather than one
+   element with a transitioning `background`: gradient interpolation
+   repaints the whole layer on the main thread every frame, while
+   opacity composites. palette.js drops data-tint to fade the outgoing
+   colours out, then restores it once the new palette is ready. */
+.album-detail.active::before,
+.album-detail.active::after {
   content: '';
   position: absolute;
   top: calc(-1 * (var(--header-h) + 20px));
@@ -631,18 +639,28 @@ header.is-queue {
   right: calc((100vw - 100%) / -2);
   pointer-events: none;
   z-index: 0;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+.album-detail.active::before {
   background:
-    radial-gradient(
-      ellipse 700px 500px at 15% 0%,
-      var(--album-glow, transparent) 0%,
-      transparent 70%
-    ),
     radial-gradient(
       ellipse 900px 700px at 100% 15%,
       var(--album-tint, transparent) 0%,
       transparent 80%
     );
-  transition: background 0.6s ease;
+}
+.album-detail.active::after {
+  background:
+    radial-gradient(
+      ellipse 700px 500px at 15% 0%,
+      var(--album-glow, transparent) 0%,
+      transparent 70%
+    );
+}
+.album-detail.active[data-tint="on"]::before,
+.album-detail.active[data-tint="on"]::after {
+  opacity: 1;
 }
 
 /* Lift content above the tint layer. */
@@ -1170,8 +1188,10 @@ header.is-queue {
 }
 .track-icon-eq, .track-icon-play { display: none; }
 
-.track:hover .track-play-icon { opacity: 1; }
-.track:not(.playing):hover .track-icon-play { display: block; }
+.track:hover .track-play-icon,
+.track:focus-visible .track-play-icon { opacity: 1; }
+.track:not(.playing):hover .track-icon-play,
+.track:not(.playing):focus-visible .track-icon-play { display: block; }
 
 .track.playing .track-play-icon { opacity: 1; }
 .track.playing .track-icon-eq   { display: block; }
@@ -1192,7 +1212,6 @@ header.is-queue {
   animation: none;
   transform: scaleY(0.5);
 }
-
 @keyframes equalize {
   from { transform: scaleY(0.35); }
   to   { transform: scaleY(1); }
@@ -1238,13 +1257,6 @@ header.is-queue {
   font-size: 1rem;
   font-weight: 400;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.9;
-}
-
-/* Flat tracks — no work header above them — carry the label weight
-   themselves. Applies to pop/jazz rows and to classical singletons
-   (a work with only one movement). */
-.tracklist-detail > .track .track-name {
-  font-weight: 400;
 }
 
 .track-composer {
@@ -2001,20 +2013,6 @@ header.is-queue {
 .vol-btn.showing-db #volIcon { opacity: 0; transition: opacity 0.2s ease; }
 .vol-btn.showing-db .vol-db-text { opacity: 1; }
 
-/* The bar's motion is decorative: the pipeline rings pulse on a loop and
-   the bar itself slides. Neither carries information, so both stand down
-   when the user asks for less motion. */
-@media (prefers-reduced-motion: reduce) {
-  .playback-bar,
-  .playback-bar.active {
-    transition: none;
-  }
-  .hqplayer-audio-pipeline .ring,
-  .hqplayer.launching {
-    animation: none;
-  }
-}
-
 
 /* ==========================================================================
    15. HQPLAYER MENU
@@ -2346,12 +2344,6 @@ header.is-queue {
     transform: scaleY(0.5) scaleX(0.6);
   }
   
-  @media (prefers-reduced-motion: reduce) {
-    .tracklist-detail:has(.work-group):has(> .track) > .track.playing::before {
-      animation: none;
-    }
-  }
-
   /* Work titles share the row's content edge. On mobile there is no
      cover column to align with (the cover stacks above), so the "left
      edge" is where a track row's title starts when nothing precedes
@@ -2362,11 +2354,10 @@ header.is-queue {
   }
 
   /* The work title drops the desktop weight and size. On desktop it
-     competes with a 2rem album title and needs to be bold to
-     register as a header; on mobile the album title is much smaller
-     and a bold work title would outrank it. The section role is
-     carried by layout alone — the padding block above, the indent
-     of the movements below. */
+     competes with a 2rem album title and needs to be bold to read as
+     the anchor of its work; on mobile the album title is much smaller
+     and a bold work title would outrank it. It stays a real heading
+     element regardless — only its visual weight changes. */
   .work-title {
     font-size: 1rem;
     font-weight: 400;
@@ -2722,4 +2713,38 @@ header.is-queue {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   will-change: transform;
   overflow: hidden;
+}
+
+/* Every decorative motion in the app stands down when the user asks for
+   less. Declared at the end of the stylesheet so these rules win the
+   cascade against the base transitions they override — an earlier
+   block loses to any later rule of equal specificity. */
+@media (prefers-reduced-motion: reduce) {
+  .album-card,
+  .album-card:hover { transition: none; transform: none; }
+
+  .album-detail-cover,
+  .album-detail-fav,
+  .album-play-btn { transition: none; }
+  .album-detail-cover:hover,
+  .album-detail-fav:hover,
+  .album-play-btn:hover { transform: none; }
+
+  .album-detail.active::before,
+  .album-detail.active::after { transition: none; }
+
+  .more-by-section { transition: none; }
+  .more-by-cover,
+  .more-by-card:hover .more-by-cover { transition: none; transform: none; }
+
+  .eq-bar { animation: none; transform: scaleY(0.5); }
+
+  .playback-bar,
+  .playback-bar.active { transition: none; }
+  .hqplayer-audio-pipeline .ring,
+  .hqplayer.launching { animation: none; }
+
+  .tracklist-detail:has(.work-group):has(> .track) > .track.playing::before {
+    animation: none;
+  }
 }
