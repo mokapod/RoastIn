@@ -118,8 +118,14 @@ body {
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
-  padding-bottom: 120px;
 }
+
+/* The playback bar is fixed to the viewport bottom (110px), so the
+   document needs room below the last card or the bar covers it. That
+   room is only needed while the bar is on screen — when nothing is
+   playing it is translated off-screen, and an unconditional padding
+   shows up as an empty band under the grid. */
+body:has(.playback-bar.active) { padding-bottom: 120px; }
 
 ::-webkit-scrollbar { display: none; }
 /* Firefox equivalent. Without it, scrollbars take layout width there,
