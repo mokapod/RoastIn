@@ -42,9 +42,34 @@ CREATE INDEX IF NOT EXISTS idx_waveform_cached_at
   ON waveform_cache (cached_at);
 """
 
-_local = threading.local()
 _schema_lock = threading.Lock()
 _schema_by_path = set()
+
+
+class _ThreadConn(threading.local):
+    """Per-thread connection that closes when the thread ends.
+
+    ThreadingMixIn runs a fresh thread per connection and never joins it
+    promptly, so a bare threading.local leaves the previous thread's
+    connection open until its Thread object is collected. Idle
+    connections hold the database and its WAL open, and once the fd
+    table fills the server starts answering with headers and an empty
+    body.
+    """
+
+    conn: sqlite3.Connection | None = None
+    path: str | None = None
+
+    def __del__(self):
+        conn = getattr(self, 'conn', None)
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
+_local = _ThreadConn()
 
 
 def db_path():
@@ -99,6 +124,18 @@ def reset_for_tests():
         conn.close()
     _local.conn = None
     _local.path = None
+
+
+def close_thread_conn():
+    """Close this thread's connection. Idempotent."""
+    conn = getattr(_local, 'conn', None)
+    if conn is not None:
+        try:
+            conn.close()
+        except sqlite3.Error:
+            pass
+        _local.conn = None
+        _local.path = None
 
 
 def get_cached(key):

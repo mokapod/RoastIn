@@ -14,6 +14,7 @@ by the time it makes its first request.
 import json
 import os
 import shutil
+import sys
 import threading
 import time
 from http.server import HTTPServer, SimpleHTTPRequestHandler
@@ -22,6 +23,7 @@ from urllib.parse import unquote, urlparse
 
 from .. import state
 from .. import cover_thumbs
+from .. import waveform_cache
 from ..config import (
     ALIASES_PATH,
     APP_DIR,
@@ -444,12 +446,17 @@ class Handler(SimpleHTTPRequestHandler):
         try:
             with open(resolved, 'rb') as f:
                 shutil.copyfileobj(f, self.wfile, COVER_CHUNK_BYTES)
-        except (BrokenPipeError, ConnectionResetError, OSError):
+        except (BrokenPipeError, ConnectionResetError):
             # Client went away mid-stream (navigated away, closed the
             # tab). Nothing to do — the file handle is closed by the
             # context manager, and the partial response is the
             # client's problem.
             pass
+        except OSError as e:
+            # Not a disconnect: the socket is ours and still open. A
+            # descriptor or disk failure here is invisible to the user
+            # (the tile just stays blank), so it must reach the log.
+            print(f'[cover] write failed for {resolved}: {e}', file=sys.stderr)
 
     def _serve_index(self):
         """Serve index.html with window.CONFIG injected before </head>."""
@@ -647,6 +654,20 @@ class Handler(SimpleHTTPRequestHandler):
 
     def log_message(self, format, *args):
         pass
+
+    def finish(self):
+        """Drop this request thread's cache connections on the way out.
+
+        The thread-local __del__ handles the case where the Thread object
+        is collected, but a finished thread can linger for a long time.
+        Closing here bounds open database handles to the threads actually
+        serving a request.
+        """
+        try:
+            super().finish()
+        finally:
+            cover_thumbs.close_thread_conn()
+            waveform_cache.close_thread_conn()
 
 
 # ----------------------------------------------------------------------

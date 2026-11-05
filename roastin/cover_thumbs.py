@@ -51,11 +51,34 @@ MAX_THUMB_BYTES = 2 * 1024 * 1024
 
 SIPS_TIMEOUT_SECONDS = 20
 
-_local = threading.local()
+
+class _ThreadConn(threading.local):
+    """Per-thread SQLite connection that closes when the thread ends.
+
+    ThreadingMixIn starts a fresh thread per connection, so a plain
+    threading.local leaves one open connection per finished thread until
+    the thread object is collected — which never happens promptly enough,
+    and every idle connection holds the database file and its WAL open.
+    A saturated fd table then fails mid-response: headers sent, body
+    empty, which the browser reports as a lost connection.
+    """
+
+    conn: sqlite3.Connection | None = None
+
+    def __del__(self):
+        conn = getattr(self, 'conn', None)
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
+_local = _ThreadConn()
 
 
 def _conn():
-    conn = getattr(_local, 'conn', None)
+    conn = _local.conn
     if conn is None:
         conn = sqlite3.connect(config.COVER_CACHE_PATH, timeout=5.0)
         conn.execute('PRAGMA journal_mode=WAL')
@@ -63,6 +86,17 @@ def _conn():
         conn.executescript(SCHEMA)
         _local.conn = conn
     return conn
+
+
+def close_thread_conn():
+    """Close this thread's connection. Idempotent."""
+    conn = getattr(_local, 'conn', None)
+    if conn is not None:
+        try:
+            conn.close()
+        except sqlite3.Error:
+            pass
+        _local.conn = None
 
 
 def key_for(path, width):
