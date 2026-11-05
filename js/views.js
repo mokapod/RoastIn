@@ -5,6 +5,24 @@
    VIEW SWITCHING
    ═══════════════════════════════════════════════════════════════════ */
 
+/* Return to a grid offset, and check that it was reached.
+   scrollTo clamps silently when the document is shorter than the target,
+   which happens while the grid is still being laid out: cards below the
+   fold are measured against their content-visibility placeholder until
+   first paint, so the document height is still moving under the restore.
+   A single scrollTo therefore lands short and stays short — nothing
+   retries. Re-apply after layout settles if the target was not reached. */
+function restoreGridScroll(target, attempt = 0) {
+  if (!target) return;
+  window.scrollTo(0, target);
+  if (Math.abs((window.scrollY || window.pageYOffset) - target) < 1) return;
+  if (attempt >= 4) return;
+  requestAnimationFrame(() => {
+    if (Math.abs((window.scrollY || window.pageYOffset) - target) < 1) return;
+    restoreGridScroll(target, attempt + 1);
+  });
+}
+
 function showGridView() {
   // Capture the queue's scroll position before hiding it. The Escape
   // handler in queue.js calls showGridView directly rather than going
@@ -39,7 +57,7 @@ function showGridView() {
   observeDetailArtist();
   updateNavButtons();
   requestAnimationFrame(() => {
-    window.scrollTo(0, savedScrollPosition);
+    restoreGridScroll(savedScrollPosition);
     if (lastKeyboardGridAlbumFolder) {
       const index = allAlbums.findIndex(
         album => album.folder === lastKeyboardGridAlbumFolder
