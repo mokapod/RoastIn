@@ -541,19 +541,25 @@ header.is-queue {
    7. ALBUM CARD
    ========================================================================== */
 .album-card {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 3px; overflow: hidden;
+  background: transparent; border: none; border-radius: 0;
+  overflow: hidden;
   display: flex; flex-direction: column;
   content-visibility: auto;
   contain-intrinsic-size: auto 260px;
-  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-  cursor: pointer; border-top-color: transparent; position: relative;
+  transition: transform 0.2s;
+  cursor: pointer; position: relative;
+  container-type: inline-size;
 }
+/* No chrome at rest: the cover is the tile. The lift plus a hover
+   surface carries the "one card" affordance that the border used to. */
 .album-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
-  border-top-color: transparent; border-right-color: transparent; border-left-color: transparent;
+  background: var(--card-hover);
   z-index: 2;
+}
+.album-card:focus-visible {
+  outline: none;
+  background: var(--card-hover);
 }
 .album-card:focus-visible, .track:focus-visible {
   outline: none; box-shadow: 0 0 0 2px var(--accent-glow);
@@ -567,7 +573,7 @@ header.is-queue {
 .album-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .album-cover-wrapper {
   position: relative; overflow: hidden; flex-shrink: 0;
-  margin-top: 1px; border-radius: 2px 2px 0 0;
+  margin-top: 0; border-radius: 0;
 }
 .album-badge {
   position: absolute; top: 0; left: 10px;
@@ -584,19 +590,23 @@ header.is-queue {
 .album-badge.dsd   { background: linear-gradient(180deg, #f05a5a 0%, #c02828 100%); }
 .album-badge.hires { background: linear-gradient(180deg, #22a04f 0%, #0d6b2a 100%); }
 .album-info {
-  padding: 0.3rem 0.3rem;
+  padding: 0.5rem 0.1rem 0;
   display: flex; flex-direction: column;
   gap: 0.2rem; flex: 1;
 }
+/* Text hierarchy is carried by colour, not opacity: title at full
+   --text, artist in --text-dim. The title reserves two lines at EVERY
+   width so the artist row starts at the same y in every tile — a
+   ragged baseline across the row reads as a broken grid. */
 .album-title {
   font-size: 0.9rem; font-weight: 600; color: var(--text);
   line-height: 1.2; height: 2.16rem;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-  overflow: hidden; opacity: 0.9;
+  overflow: hidden;
 }
 .album-artist {
-  font-size: 0.85rem; font-weight: 400; color: var(--text);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.9;
+  font-size: 0.85rem; font-weight: 400; color: var(--text-dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
 
