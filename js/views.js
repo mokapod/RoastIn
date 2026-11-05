@@ -479,11 +479,20 @@ function showAlbumDetail(albumIndex, pushState = true, preserveScroll = false) {
   } else if (preserveScroll) {
     scheduleDetailScrollRestore(scrollBeforeRender);
   } else {
-    // Restore scroll for this album on Back/Forward. Prefer the live
-    // Map (populated when we last left this album), fall back to the
-    // history entry's push-time scrollY, then 0.
-    const savedY = detailScrollPositions.get(album.folder);
-    const restoreY = savedY ?? history.state?.scrollY ?? 0;
+    // Restore scroll for this album on Back/Forward.
+    //
+    // detailScrollPositions only holds albums we have *left* through
+    // popstate, so it is empty the first time we come back to an album.
+    // history.state.scrollY cannot cover that case either: an entry is
+    // pushed with scrollY 0 and repainted with the offset the view was
+    // left at, which is what a Back reaches — but the detail view was
+    // entered straight from the grid, so its entry and the grid entry
+    // are the same offset and detailScrollPositions is what records it.
+    // Prefer the live value for this album, then the position the grid
+    // holds for the album we just left, then the entry, then 0.
+    const liveY = detailScrollPositions.get(album.folder);
+    const restoreY = liveY ?? savedScrollPosition
+      ?? history.state?.scrollY ?? 0;
     scheduleDetailScrollRestore(restoreY);
   }
 
