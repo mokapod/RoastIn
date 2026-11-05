@@ -11,6 +11,23 @@ let currentAlbumsToRender = [];      // snapshot of allAlbums for this cycle
 let gridObserver = null;
 let currentSentinel = null;          // kept to avoid getElementById on removal
 
+/* Placeholder height for cards that have not been laid out yet.
+   .album-card sets content-visibility:auto, so a card below the fold is
+   measured against contain-intrinsic-size until it is first painted. The
+   placeholder has to equal the real card height: a mismatch resizes the
+   document while the grid is being laid out, and the scroll restore in
+   showGridView then lands at a clamped offset instead of the saved one.
+   Measure a card that is on screen (laid out), then publish it to CSS. */
+function syncAlbumCardHeightMeasure() {
+  const grid = document.getElementById('albumGrid');
+  if (!grid) return;
+  const card = grid.querySelector('.album-card');
+  if (!card) return;
+  const height = card.getBoundingClientRect().height;
+  if (!height) return;
+  grid.style.setProperty('--album-card-h', `${height.toFixed(2)}px`);
+}
+
 function initGridObserver() {
   if (gridObserver) gridObserver.disconnect();
   // Pre-load the next chunk well before it reaches the viewport so
@@ -95,6 +112,11 @@ function appendNextChunk() {
   // Append the new chunk to the existing grid (no full reflow)
   grid.insertAdjacentHTML('beforeend', cardsHTML);
   renderOffset = end;
+
+  // The chunk that just landed contains the top card, which is on screen
+  // and therefore laid out: publish its height so the cards still using
+  // the placeholder measure the same.
+  if (start === 0) syncAlbumCardHeightMeasure();
 
   if (renderOffset < currentAlbumsToRender.length) {
     currentSentinel = document.createElement('div');
@@ -327,6 +349,13 @@ function renderAlbumGrid(albumsToRender) {
   initGridObserver();
   appendNextChunk();
 }
+
+/* Cards re-lay themselves at a new width, so the placeholder has to be
+   re-measured whenever the grid changes size — otherwise the two
+   disagree again until the next chunk lands. */
+new ResizeObserver(() => syncAlbumCardHeightMeasure()).observe(
+  document.getElementById('content')
+);
 
 /* ═══════════════════════════════════════════════════════════════════
    Artist string parsing — split on comma, &, and /; classify each

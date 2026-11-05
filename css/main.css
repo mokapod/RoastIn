@@ -544,8 +544,19 @@ header.is-queue {
   background: transparent; border: none; border-radius: 0;
   overflow: hidden;
   display: flex; flex-direction: column;
+  /* Off-screen cards skip layout, which keeps a 350-album grid cheap.
+     Until a card has been laid out once it is measured against this
+     placeholder, so the placeholder has to equal the real card height:
+     a wrong value resizes the document while the grid is being laid
+     out, and showGridView's scroll restore then lands at a clamped
+     offset instead of the saved one.
+     --album-card-h is measured from a laid-out card by
+     syncAlbumCardHeightMeasure() (js/library.js) and refreshed on resize.
+     Note: cq units cannot be used here — contain-intrinsic-size is itself
+     a size-containment property, so calc(100cqw + 60.73px) resolves
+     against the card's own placeholder and balloons to ~10x. Keep px. */
   content-visibility: auto;
-  contain-intrinsic-size: auto 260px;
+  contain-intrinsic-size: var(--album-card-h, 260px);
   transition: transform 0.2s;
   cursor: pointer; position: relative;
   container-type: inline-size;
