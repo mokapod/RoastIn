@@ -549,6 +549,7 @@ header.is-queue {
   transition: transform 0.2s;
   cursor: pointer; position: relative;
   container-type: inline-size;
+  --cover-inset: 1px;
 }
 /* No chrome at rest: the cover is the tile. The lift plus a hover
    surface carries the "one card" affordance that the border used to. */
@@ -573,11 +574,13 @@ header.is-queue {
 .album-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .album-cover-wrapper {
   position: relative; overflow: hidden; flex-shrink: 0;
-  margin-top: 0; border-radius: 0;
+  margin-top: var(--cover-inset, 0); border-radius: 0;
 }
 /* Format tab hanging from the cover's top edge. Colour carries the
    recognition; size and alpha are dialled back from the original so 67
-   of them sit under the artwork rather than on top of it. */
+   of them sit under the artwork rather than on top of it.
+   The badge rides on the card, not inside the cover wrapper, and sits
+   1px above the cover's edge so it reads as hanging off the sleeve. */
 .album-badge {
   position: absolute; top: 0; left: 10px;
   padding: 2px 7px; font-size: 0.6rem; font-weight: 500;
