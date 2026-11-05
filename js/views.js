@@ -39,6 +39,13 @@ function showGridView() {
   observeDetailArtist();
   updateNavButtons();
   requestAnimationFrame(() => {
+    // A rebuild under the detail view (alias merge, reveal-album) or a
+    // deferred filter can leave the grid holding only its first chunk.
+    // scrollTo clamps to the document height that exists when it runs,
+    // and a clamped restore never recovers — the sentinel ends up below
+    // the viewport, outside the observer's root margin, so the rest of
+    // the grid is never appended. Render what the offset needs first.
+    ensureRenderedForOffset(savedScrollPosition);
     window.scrollTo(0, savedScrollPosition);
     if (lastKeyboardGridAlbumFolder) {
       const index = allAlbums.findIndex(

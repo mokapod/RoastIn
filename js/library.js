@@ -105,6 +105,39 @@ function appendNextChunk() {
   }
 }
 
+/* Render enough chunks that a scroll to `target` is reachable.
+
+   The grid paints the first 100 cards and appends the rest from the
+   sentinel's IntersectionObserver. `scrollTo` clamps silently to the
+   document height that exists when it runs, so a restore into a grid
+   that has not rendered that far lands short — and stays short: the
+   sentinel then sits below the viewport, outside the observer's 800px
+   root margin, so nothing ever appends the rest and the page is
+   stranded mid-grid.
+
+   Estimate from the grid's own geometry — its computed column count
+   and a rendered card's height — rather than the media-query tiers,
+   and round up. Chunks append in order, so overshooting costs one
+   extra chunk, while undershooting is exactly the clamp this avoids.
+   A card that has never been painted measures against
+   contain-intrinsic-size, a few px off the real height; the extra two
+   rows absorb that. */
+function ensureRenderedForOffset(target) {
+  if (!(target > 0) || currentAlbumsToRender.length === 0) return;
+
+  const grid = document.getElementById('albumGrid');
+  const card = grid && grid.querySelector('.album-card');
+  if (!grid || !card) return;
+
+  const cols = getComputedStyle(grid).gridTemplateColumns.split(' ').length;
+  const gap = parseFloat(getComputedStyle(grid).rowGap) || 0;
+  const cardH = card.getBoundingClientRect().height || 260;
+  const rowsNeeded = Math.ceil(target / (cardH + gap)) + 2;
+  const cardsNeeded = Math.min(rowsNeeded * cols, currentAlbumsToRender.length);
+
+  ensureGridIndexRendered(cardsNeeded - 1);
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    5. LIBRARY — grouping, sorting, filtering, grid rendering
    ═══════════════════════════════════════════════════════════════════ */
