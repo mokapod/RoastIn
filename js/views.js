@@ -5,15 +5,66 @@
    VIEW SWITCHING
    ═══════════════════════════════════════════════════════════════════ */
 
+/* A detail-view scroll restore that can be cancelled.
+   The restore has to wait for the detail markup to be in the document, but
+   a frame queued for that can still be pending when the user leaves the
+   detail view: it fires on the first frame after showGridView returns to
+   the grid, and a detail target of 0 (an album never visited before, whose
+   pushed history entry carries scrollY: 0) yanks the grid back to the top
+   one frame after the grid restored its own offset. Track the handle and
+   drop any pending restore when the views change, so a frame belonging to
+   a view that is no longer on screen can never run. */
+let detailScrollRestoreFrame = 0;
+
+function cancelDetailScrollRestore() {
+  if (!detailScrollRestoreFrame) return;
+  cancelAnimationFrame(detailScrollRestoreFrame);
+  detailScrollRestoreFrame = 0;
+}
+
+function scheduleDetailScrollRestore(target) {
+  cancelDetailScrollRestore();
+  detailScrollRestoreFrame = requestAnimationFrame(() => {
+    detailScrollRestoreFrame = 0;
+    window.scrollTo(0, target);
+  });
+}
+
 /* Return to a grid offset, and check that it was reached.
-   scrollTo clamps silently when the document is shorter than the target,
-   which happens while the grid is still being laid out: cards below the
-   fold are measured against their content-visibility placeholder until
-   first paint, so the document height is still moving under the restore.
-   A single scrollTo therefore lands short and stays short — nothing
-   retries. Re-apply after layout settles if the target was not reached. */
+   scrollTo clamps silently when the document is shorter than the target.
+   The grid renders in 100-card chunks from an IntersectionObserver on a
+   sentinel, so a deep target can be beyond the rendered end: the restore
+   lands at the rendered bottom, and because the sentinel is then below the
+   viewport the observer never fires again — the grid stays short (measured:
+   target 8187 against 100 cards settled at 2913 and stayed, and against a
+   half-built grid at 5897 with 200 of 293 cards, sentinel still pending).
+   Retrying on a frame was not enough: all four attempts ran inside ~60ms,
+   during which only one extra chunk landed (a 5897 clamp on attempt 3).
+   The fix is to make the chunks the target needs exist *before* scrolling,
+   then keep re-checking across frames for the layout to settle. */
+function ensureRenderedForOffset(target) {
+  if (typeof ensureGridIndexRendered !== 'function') return;
+  if (!currentAlbumsToRender.length) return;
+  // Estimate how many cards to render to reach the target. Guessing high is
+  // harmless (chunks are appended in order), guessing low is what clamps,
+  // so assume the smallest plausible card pitch and round up.
+  const firstCard = $content.querySelector('.album-card');
+  const columns = (() => {
+    const grid = document.getElementById('albumGrid');
+    if (!grid) return 1;
+    const template = getComputedStyle(grid).gridTemplateColumns;
+    return template ? template.split(' ').length : 1;
+  })();
+  const gap = 25;
+  const cardH = firstCard ? firstCard.getBoundingClientRect().height : 260;
+  const rowPitch = Math.max(cardH + gap, 1);
+  const rowsNeeded = Math.ceil(target / rowPitch) + 2;
+  ensureGridIndexRendered(Math.min(rowsNeeded * columns, currentAlbumsToRender.length - 1));
+}
+
 function restoreGridScroll(target, attempt = 0) {
   if (!target) return;
+  ensureRenderedForOffset(target);
   window.scrollTo(0, target);
   if (Math.abs((window.scrollY || window.pageYOffset) - target) < 1) return;
   if (attempt >= 4) return;
@@ -33,6 +84,7 @@ function showGridView() {
   }
 
   disconnectMoreByObserver();
+  cancelDetailScrollRestore();
   currentDetailAlbumIndex = -1;
   isQueueView = false;
   $queueView.classList.remove('active');
@@ -425,14 +477,14 @@ function showAlbumDetail(albumIndex, pushState = true, preserveScroll = false) {
   if (pushState) {
     window.scrollTo(0, 0);
   } else if (preserveScroll) {
-    requestAnimationFrame(() => window.scrollTo(0, scrollBeforeRender));
+    scheduleDetailScrollRestore(scrollBeforeRender);
   } else {
     // Restore scroll for this album on Back/Forward. Prefer the live
     // Map (populated when we last left this album), fall back to the
     // history entry's push-time scrollY, then 0.
     const savedY = detailScrollPositions.get(album.folder);
     const restoreY = savedY ?? history.state?.scrollY ?? 0;
-    requestAnimationFrame(() => window.scrollTo(0, restoreY));
+    scheduleDetailScrollRestore(restoreY);
   }
 
   isDetailView = true;
@@ -494,6 +546,7 @@ function showQueueView() {
   }
 
   disconnectMoreByObserver();
+  cancelDetailScrollRestore();
   currentDetailAlbumIndex = -1;
   isDetailView = false;
   isQueueView = true;
