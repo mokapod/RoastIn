@@ -105,9 +105,19 @@ async function extractPalette(coverUrl) {
 
   // Quantize to 4 bits per channel and bin. Skip pixels that would
   // produce a muddy result: near-black, near-white, and near-gray.
+  // Every pixel is also binned unfiltered, so a cover with no
+  // saturated cluster at all can still fall back to the colour that
+  // predominates across the whole image — its background.
   const bins = new Map();
+  const allBins = new Map();
   for (let i = 0; i < data.length; i += 4) {
     const r = data[i], g = data[i + 1], b = data[i + 2];
+    const key = (r >> 4) << 8 | (g >> 4) << 4 | (b >> 4);
+
+    let all = allBins.get(key);
+    if (!all) { all = { r: 0, g: 0, b: 0, n: 0 }; allBins.set(key, all); }
+    all.r += r; all.g += g; all.b += b; all.n++;
+
     const max = Math.max(r, g, b);
     const min = Math.min(r, g, b);
 
@@ -115,13 +125,17 @@ async function extractPalette(coverUrl) {
     if (min > 220)    continue;   // too bright, washes out
     if (max - min < 25) continue; // too gray to be useful
 
-    const key = (r >> 4) << 8 | (g >> 4) << 4 | (b >> 4);
     let bin = bins.get(key);
     if (!bin) { bin = { r: 0, g: 0, b: 0, n: 0 }; bins.set(key, bin); }
     bin.r += r; bin.g += g; bin.b += b; bin.n++;
   }
 
-  if (bins.size === 0) {
+  // A uniformly dark, bright or gray cover (Rumours, The Godfather,
+  // Swan Lake — 4 of 293 albums) has no saturated cluster, and used to
+  // render with no tint at all, leaving the detail page bare black.
+  // Fall back to the predominant colour of the whole cover.
+  const source = bins.size > 0 ? bins : allBins;
+  if (source.size === 0) {
     boundedSet(paletteCache, coverUrl, null, PALETTE_CACHE_MAX);
     return null;
   }
@@ -130,7 +144,7 @@ async function extractPalette(coverUrl) {
   // medium-saturated color reads as "the cover's color" more
   // reliably than a tiny cluster of a vivid one.
   let best = null;
-  for (const bin of bins.values()) {
+  for (const bin of source.values()) {
     if (!best || bin.n > best.n) best = bin;
   }
 
@@ -140,12 +154,12 @@ async function extractPalette(coverUrl) {
     b: best.b / best.n
   };
 
-  const tintSource = constrainColor(dominant, 0.30, 0.55, 0.25);
-  const glowSource = constrainColor(dominant, 0.45, 0.65, 0.30);
+  const tintSource = constrainColor(dominant, 0.30, 0.55, 0.32);
+  const glowSource = constrainColor(dominant, 0.45, 0.65, 0.38);
 
   const palette = {
-    tint: rgba(tintSource, 0.10),
-    glow: rgba(glowSource, 0.16)
+    tint: rgba(tintSource, 0.16),
+    glow: rgba(glowSource, 0.22)
   };
 
   boundedSet(paletteCache, coverUrl, palette, PALETTE_CACHE_MAX);

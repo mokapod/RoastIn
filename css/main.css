@@ -681,17 +681,17 @@ header.is-queue {
 .album-detail.active::before {
   background:
     radial-gradient(
-      ellipse 900px 700px at 100% 15%,
+      ellipse 1500px 1300px at 100% 10%,
       var(--album-tint, transparent) 0%,
-      transparent 80%
+      transparent 92%
     );
 }
 .album-detail.active::after {
   background:
     radial-gradient(
-      ellipse 700px 500px at 15% 0%,
+      ellipse 1500px 1300px at 0% 80%,
       var(--album-glow, transparent) 0%,
-      transparent 70%
+      transparent 92%
     );
 }
 .album-detail.active[data-tint="on"]::before,
