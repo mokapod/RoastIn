@@ -550,13 +550,19 @@ header.is-queue {
   background: transparent; border: none; border-radius: 0;
   overflow: hidden;
   display: flex; flex-direction: column;
-  content-visibility: auto;
-  contain-intrinsic-size: auto 260px;
   transition: transform 0.2s;
   cursor: pointer; position: relative;
   container-type: inline-size;
   --cover-inset: 1px;
 }
+/* No content-visibility here. It made the card's height depend on whether
+   Safari had painted it (260px placeholder vs ~225px real), so the grid's
+   document height swung by ~670px as the user scrolled — and when the grid
+   returned from display:none the paint state reset, the height changed under
+   the restore, and Safari dragged the scroll back by up to ~900px. The card
+   is a fixed-height box (square cover + a two-line title reservation), so
+   laying it out is cheap; measured cost of dropping it: two or three 33ms
+   frames at the start of a scroll pass, then a steady 16-17ms. */
 /* No chrome at rest: the cover is the tile. The lift plus a hover
    surface carries the "one card" affordance that the border used to. */
 .album-card:hover {
