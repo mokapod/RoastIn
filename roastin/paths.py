@@ -20,6 +20,14 @@ def normalize_path(raw_path: str | None) -> str:
     path = path.removeprefix('file://')
     path = unquote(path)
 
+    # Strip surrounding whitespace. A whitespace-only string otherwise
+    # survives as a non-empty path, and is_within_allowed_roots resolves
+    # it via realpath to the process CWD (a sub-path of ROOT), so a
+    # "   " path passes the guard and reaches HQPlayer as a garbage
+    # relative path. Collapsing it to '' routes it into the same
+    # empty-path rejection every caller already handles.
+    path = path.strip()
+
     if sys.platform == 'win32' and len(path) >= 3 \
             and path[0] == '/' and path[2] == ':':
         path = path[1:]

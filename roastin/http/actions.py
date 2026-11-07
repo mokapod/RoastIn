@@ -243,6 +243,13 @@ def _load_impl(handler, tracks, start_track, seek_to, mode):
 
     unique_dirs = list({os.path.dirname(p) for p in paths})
 
+    # The start_track bounds check below clamps instead of rejecting.
+    # That is deliberate: start_track comes from the frontend's
+    # trackIndex + 1, and the restore-playback flow rebuilds a queue
+    # that may have shrunk since playback last left off, so an
+    # out-of-range value is a legitimate restore request, not a client
+    # bug. Clamping to 1 lets the load proceed and SelectTrack pick a
+    # real track rather than failing the whole album restore.
     if start_track < 1 or start_track > len(paths):
         start_track = 1
 
