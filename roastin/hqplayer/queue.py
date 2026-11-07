@@ -99,6 +99,7 @@ def query_playlistget_lean(timeout: float = 30,
     timing = _XML_TIMING_ENABLED
     t0 = time.perf_counter() if timing else 0.0
     total_bytes = 0
+    verdict_recorded = False
 
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -140,6 +141,15 @@ def query_playlistget_lean(timeout: float = 30,
                         complete = True
                         break
 
+                    # First bytes back prove HQPlayer answered, the
+                    # same health signal the status path relies on.
+                    # Record it so a timeout/partial reply below still
+                    # re-closes the breaker instead of stranding the
+                    # probe slot.
+                    if not verdict_recorded:
+                        hqplayer_breaker.success()
+                        verdict_recorded = True
+
                     total_bytes += len(chunk)
                     parser.feed(chunk)
 
@@ -173,8 +183,18 @@ def query_playlistget_lean(timeout: float = 30,
     except Exception as e:
         print(f'[queue] PlaylistGet failed: {e}')
         hqplayer_breaker.failure()
+        verdict_recorded = True
         raise ConnectionError('Failed to communicate with HQPlayer') from e
     finally:
+        # Hand the probe slot back if we took it but never recorded a
+        # verdict. This can only happen on the "clean but unanswered"
+        # exit: the deadline fired before any bytes arrived and we broke
+        # out of the loop before the success block above ran. That exit
+        # says nothing about HQPlayer's health, so no verdict is earned —
+        # but without release() the slot would stay claimed and the
+        # breaker would wedge open forever.
+        if not verdict_recorded:
+            hqplayer_breaker.release()
         # Measured normal: a few hundred ms empty, 2-4 s with cover art.
         # The threshold sits above the cover case, so a warning means the
         # queue grew or HQPlayer's reply path degraded.

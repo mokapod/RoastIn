@@ -59,6 +59,8 @@ def send_xml_command(xml_string):
 
     _require_reachable()
 
+    verdict_recorded = False
+
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.settimeout(2)
@@ -77,6 +79,7 @@ def send_xml_command(xml_string):
                 # proves nothing — a hung HQPlayer accepts and then says
                 # nothing, which would leave the breaker stuck closed.
                 hqplayer_breaker.success()
+                verdict_recorded = True
             except socket.timeout:
                 # Deliberately NOT a failure(). A healthy HQPlayer can
                 # take longer than 2 s to acknowledge a command, so a
@@ -98,7 +101,16 @@ def send_xml_command(xml_string):
     except Exception as e:
         print(f'XML Command failed: {e}')
         hqplayer_breaker.failure()
+        verdict_recorded = True
         raise ConnectionError('Failed to communicate with HQPlayer') from e
+    finally:
+        # If this call was admitted as the half-open probe and left
+        # without recording success or failure (the timeout branch
+        # above), hand the probe slot back. Without this the breaker's
+        # _probing stays True and no future caller — including the
+        # status poll that would otherwise re-close it — is admitted.
+        if not verdict_recorded:
+            hqplayer_breaker.release()
 
 
 def send_xml_commands_pipelined(xml_strings, idle_timeout=0.5):
@@ -134,6 +146,8 @@ def send_xml_commands_pipelined(xml_strings, idle_timeout=0.5):
     # The N=1 case delegates above, so its breaker logic applies.
     # For N≥2 this function opens its own socket — gate that here.
     _require_reachable()
+
+    verdict_recorded = False
 
     timing = _XML_TIMING_ENABLED
     t_start = time.perf_counter() if timing else 0.0
@@ -171,6 +185,13 @@ def send_xml_commands_pipelined(xml_strings, idle_timeout=0.5):
                     break
                 if not chunk:
                     break
+                # A first reply proves HQPlayer accepted and answered
+                # the batch — the same health signal the status path
+                # uses. Record it so a partial drain still re-closes
+                # the breaker.
+                if not verdict_recorded:
+                    hqplayer_breaker.success()
+                    verdict_recorded = True
                 reply_bytes += len(chunk)
                 reply_chunks += 1
 
@@ -191,4 +212,12 @@ def send_xml_commands_pipelined(xml_strings, idle_timeout=0.5):
     except Exception as e:
         print(f'XML pipelined commands failed: {e}')
         hqplayer_breaker.failure()
+        verdict_recorded = True
         raise ConnectionError('Failed to communicate with HQPlayer') from e
+    finally:
+        # Same probe-slot release as send_xml_command: a drain that ends
+        # without any verdict (silent upstream after the write burst) must
+        # not leave _probing True or the breaker wedges open and no future
+        # caller, including the status poll, is ever admitted again.
+        if not verdict_recorded:
+            hqplayer_breaker.release()
