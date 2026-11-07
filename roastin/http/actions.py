@@ -86,15 +86,30 @@ def handle_run_script(handler):
     if not os.path.isabs(script_path):
         script_path = os.path.join(SCRIPTS_DIR, script_path)
 
-    if not os.path.isfile(script_path):
+    # Resolve symlinks before the executable checks: isfile and X_OK
+    # follow symlinks, so a symlink planted inside scripts/ pointing at
+    # any executable elsewhere would otherwise be admitted. Resolving
+    # first also makes the containment comparison canonical.
+    script_real = os.path.realpath(script_path)
+
+    if not os.path.isfile(script_real):
         raise ValueError(f'Script not found: {script_path}')
 
-    if not os.access(script_path, os.X_OK):
+    if not os.access(script_real, os.X_OK):
         raise ValueError(f'Script not executable: {script_path}')
+
+    # The name map itself is trusted (settings.json, user-edited), but
+    # its values may be absolute or may resolve through a symlink to
+    # anywhere on disk. Confine the run to SCRIPTS_DIR so a symlink
+    # cannot turn an arbitrary writable file into a root-equivalent
+    # script. realpath makes this comparison canonical on both sides.
+    scripts_root = os.fspath(SCRIPTS_DIR)
+    if os.path.commonpath([script_real, scripts_root]) != scripts_root:
+        raise ValueError('Script outside scripts directory')
 
     try:
         result = subprocess.run(
-            ['/bin/bash', script_path],
+            ['/bin/bash', script_real],
             capture_output=True,
             timeout=60,
             check=False,
@@ -206,6 +221,17 @@ def _load_impl(handler, tracks, start_track, seek_to, mode):
         raise ValueError("Missing 'tracks'")
 
     paths = [normalize_path(t.get('path', '')) for t in tracks]
+
+    # Reject any track whose path normalizes to empty. The previous
+    # behaviour passed the empty string to is_within_allowed_roots,
+    # where realpath('') resolved to the process CWD. If the CWD is
+    # inside an allowed root — the normal case — the guard returned
+    # True without matching any real file, and SetTransportPath or
+    # PlaylistUpload received a bare empty path. This aligns the
+    # guard with the same check in handle_queue_append (lines 337-338).
+    for p in paths:
+        if not p:
+            raise ValueError('Missing track path')
 
     # Reject any path that resolves outside the allowed roots. Done
     # before the multi-directory check so an out-of-bounds path fails

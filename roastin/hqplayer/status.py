@@ -123,7 +123,20 @@ def _unreachable() -> StatusPayload:
     Identical shape either way: the UI cannot distinguish "HQPlayer
     didn't answer" from "we didn't ask because it just didn't answer".
     Only the latency differs (2 s vs microseconds).
+
+    The queue cache is invalidated here so that a subsequent /api/queue
+    call cannot return stale tracks from a queue that HQPlayer no longer
+    holds. Without this, if the server's last successful status poll
+    recorded tracks_total=N, get_queue_cached would match the cache on
+    N and return the pre-death playlist even though HQPlayer is gone.
+    The invalidation is unconditional — the cache is never valid when the
+    upstream is unreachable, and it can be populated by a /api/queue
+    fetch even when no status poll has ever succeeded.
     """
+    from .queue import invalidate_queue_cache
+
+    invalidate_queue_cache()
+
     if state.last_known_status:
         cached = dict(state.last_known_status)
         cached['state'] = 'stopped'
