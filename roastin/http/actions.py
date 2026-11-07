@@ -250,6 +250,12 @@ def _load_impl(handler, tracks, start_track, seek_to, mode):
     # — some tracks moved, others intact — still proceeds: HQPlayer
     # plays what it finds and skips the rest, which is the existing
     # behaviour the frontend already handles gracefully.
+    #
+    # TOCTOU: a track that exists here can vanish before HQPlayer opens
+    # it (external unmount, concurrent rename). That is a runtime error
+    # downstream, not a correctness problem here — this guard only
+    # prevents the specific failure mode of PlaylistClear followed by a
+    # zero-track playlist being handed to a dead endpoint.
     if not any(os.path.isfile(p) for p in paths):
         raise ValueError('No tracks found on disk')
 
