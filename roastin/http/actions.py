@@ -167,14 +167,14 @@ def handle_load(handler):
     — it costs nothing to invalidate on an album load and it
     guarantees correctness on a queue load.
 
-    Every track path is validated against the allowed roots before
-    any command reaches HQPlayer. Without that check, a client with a
-    valid token could hand HQPlayer an arbitrary filesystem path and
-    observe whether the transport attempted to decode it.
+    Every track path is validated against the allowed roots before any
+    command reaches HQPlayer. Without that check, a client with a valid
+    token could hand HQPlayer an arbitrary filesystem path and observe
+    whether the transport attempted to decode it.
 
-    The start_track and seek_to conversions are null-safe
-    (`None or 1` evaluates to 1), so unlike the other POST handlers
-    they don't route through get_int.
+    The start_track and seek_to values are parsed through get_int so
+    that null or missing fields default safely (1 and 0 respectively)
+    and non-numeric values produce a 400 rather than a 500.
 
     Timing: after the transport is primed (upload or
     SetTransportPath), the trailing SelectTrack / Seek / Play sequence
@@ -187,8 +187,11 @@ def handle_load(handler):
     """
     data = read_json_body(handler)
     tracks = data.get('tracks', [])
-    start_track = int(data.get('start_track', 1) or 1)
-    seek_to = int(data.get('seek_to', 0) or 0)
+    # get_int is null-safe: a missing or null start_track defaults to 1
+    # (seek_to to 0), and anything non-numeric becomes a 400 instead of
+    # the TypeError->500 the old bare int() produced on e.g. {"start_track": "x"}.
+    start_track = get_int(data, 'start_track', 1)
+    seek_to = get_int(data, 'seek_to', 0)
     mode = data.get('mode', 'album')
 
     # A load is the slowest interactive operation: PlaylistClear +
