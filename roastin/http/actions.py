@@ -244,6 +244,15 @@ def _load_impl(handler, tracks, start_track, seek_to, mode):
         if not is_within_allowed_roots(p):
             raise ValueError('Track path outside allowed roots')
 
+    # Reject a load where no paths point to real files. This catches a
+    # completely stale library (album moved or unmounted) before any
+    # PlaylistClear wipes the current queue. A partially-missing album
+    # — some tracks moved, others intact — still proceeds: HQPlayer
+    # plays what it finds and skips the rest, which is the existing
+    # behaviour the frontend already handles gracefully.
+    if not any(os.path.isfile(p) for p in paths):
+        raise ValueError('No tracks found on disk')
+
     unique_dirs = list({os.path.dirname(p) for p in paths})
 
     # The start_track bounds check below clamps instead of rejecting.
