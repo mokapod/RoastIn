@@ -129,9 +129,19 @@ def _unreachable() -> StatusPayload:
     holds. Without this, if the server's last successful status poll
     recorded tracks_total=N, get_queue_cached would match the cache on
     N and return the pre-death playlist even though HQPlayer is gone.
-    The invalidation is unconditional — the cache is never valid when the
-    upstream is unreachable, and it can be populated by a /api/queue
+    The invalidation is unconditional — the cache is never valid when
+    the upstream is unreachable, and it can be populated by a /api/queue
     fetch even when no status poll has ever succeeded.
+
+    state and transport_loaded are overridden to 'stopped' and False
+    because HQPlayer's actual live state is unknown when unreachable.
+    position is NOT overridden: the last known position from the cache
+    is preserved. When a paused tab wakes from system sleep, the SSE
+    seed carries the correct position and the UI anchors to it rather
+    than snapping to 0:00. The heartbeat is only sent while state is
+    'playing', so a paused track receives no position tick until the
+    next transport event — a reconnect with the stale-correct position
+    is the only anchor it gets.
     """
     from .queue import invalidate_queue_cache
 
@@ -140,7 +150,6 @@ def _unreachable() -> StatusPayload:
     if state.last_known_status:
         cached = dict(state.last_known_status)
         cached['state'] = 'stopped'
-        cached['position'] = 0
         cached['hqplayer_running'] = False
         cached['transport_loaded'] = False
         return cached
@@ -223,7 +232,6 @@ def _poll_status(sync_queue_cache_with_status) -> StatusPayload:
                         if state.last_known_status:
                             cached = dict(state.last_known_status)
                             cached['state'] = 'stopped'
-                            cached['position'] = 0
                             cached['hqplayer_running'] = True
                             cached['transport_loaded'] = False
                             return cached
