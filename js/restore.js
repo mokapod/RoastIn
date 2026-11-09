@@ -25,12 +25,22 @@ function normalizeFileUri(uri) {
 function restorePlaybackFromServer(data) {
   if (currentPlayback.album) return;
 
-  // The server sets transport_loaded: false whenever it returns
-  // cached metadata rather than a live Status from HQPlayer. That
-  // happens after a queue clear or a stop, and during a brief gap
-  // when HQPlayer has no current track. Restoring from the cache in
-  // that state would re-populate the playback bar with a track that
-  // isn't loaded, undoing the clear.
+  // transport_loaded: false is set by the server in two cases that both
+  // make restoring dangerous:
+  //
+  //  1. HQPlayer is unreachable (circuit-breaker open or socket error).
+  //     The payload is a cached snapshot with state/stopped and
+  //     transport_loaded:false; restoring from it would re-populate the
+  //     bar with a track that isn't actually loaded.
+  //
+  //  2. HQPlayer returned a live Status with no song and no album. That
+  //     is the correct live state after a queue clear, and restoring
+  //     from it would undo the clear by re-populating the bar from the
+  //     now-absent track.
+  //
+  // Both cases mean the transport is not currently loaded; returning
+  // here is the right action regardless of how transport_loaded: false
+  // was set.
   if (data.transport_loaded === false) return;
 
   if (!data.album && !data.song) return;

@@ -13,6 +13,16 @@ import threading
 
 # Last known status snapshot, used when HQPlayer disappears so the UI
 # keeps showing something rather than blanking out.
+#
+# The snapshot preserves position from the last successful poll. This
+# matters for paused tracks: HQPlayer stops sending position frames when
+# paused, so a paused tab that loses connection (network partition,
+# system sleep, or a short HQPlayer unavailability window) would
+# otherwise display 0:00 on reconnect. The snapshot carries the correct
+# last-known position into the SSE seed so the UI anchors to it. State,
+# transport_loaded, and hqplayer_running are overridden to their
+# correct "unknown" values (stopped/False) so the UI does not falsely
+# show a playing indicator; only position is preserved from the cache.
 last_known_status = None
 
 # Queue cache.
