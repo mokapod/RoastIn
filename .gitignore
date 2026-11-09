@@ -1,4 +1,5 @@
 .api_token
+.playback_session.json
 .DS_Store
 __pycache__/
 *.pyc

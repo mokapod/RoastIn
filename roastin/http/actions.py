@@ -24,6 +24,7 @@ from ..hqplayer.client import send_xml_command, send_xml_commands_pipelined
 from ..hqplayer.queue import get_queue_cached, invalidate_queue_cache
 from ..library.favorites import load_favorites, save_favorites
 from ..paths import is_within_allowed_roots, normalize_path
+from ..playback_session import load_session, save_session
 from ..platform import os_open, os_quit_app, os_reveal
 from .body import get_int, read_json_body
 
@@ -153,6 +154,11 @@ def handle_load(handler):
       'queue'           — PlaylistUpload. A track queue that
                           PlaylistAdd can extend.
 
+    `play` defaults to true (match existing behaviour). Session restore
+    sends `play: false` so a paused session is reconstructed in the
+    transport without starting playback — the client then issues its own
+    Play only when the intended state was 'playing'.
+
     Multi-directory albums (disc folders) always use the queue path,
     since SetTransportPath cannot span directories.
 
@@ -193,6 +199,15 @@ def handle_load(handler):
     start_track = get_int(data, 'start_track', 1)
     seek_to = get_int(data, 'seek_to', 0)
     mode = data.get('mode', 'album')
+    play = data.get('play', True)
+    # Accept only booleans (or the JSON-equivalent integers 0/1). A
+    # string "false" must not silently become truthy and enable autoplay.
+    if isinstance(play, bool):
+        pass
+    elif isinstance(play, int) and play in (0, 1):
+        play = bool(play)
+    else:
+        raise ValueError("Invalid 'play': expected a boolean")
 
     # A load is the slowest interactive operation: PlaylistClear +
     # upload + a deliberate 0.5 s registration sleep + the transport
@@ -200,10 +215,10 @@ def handle_load(handler):
     # HQPlayer actually stalled rather than the sequence running.
     from ..timing import timed
     with timed('load', tracks=len(tracks), mode=mode):
-        _load_impl(handler, tracks, start_track, seek_to, mode)
+        _load_impl(handler, tracks, start_track, seek_to, mode, play=play)
 
 
-def _load_impl(handler, tracks, start_track, seek_to, mode):
+def _load_impl(handler, tracks, start_track, seek_to, mode, play=True):
 
     # Default to the requested mode. Overwritten below once the
     # multi-directory heuristic has run, so the response always
@@ -280,7 +295,8 @@ def _load_impl(handler, tracks, start_track, seek_to, mode):
         cmds = [f'<SelectTrack index="{start_track}"/>']
         if seek_to > 0:
             cmds.append(f'<Seek position="{seek_to}"/>')
-        cmds.append('<Play/>')
+        if play:
+            cmds.append('<Play/>')
         return cmds
 
     if use_playlist:
@@ -601,7 +617,35 @@ def reveal_folder(handler):
     os_reveal(folder)
 
 
-# Imported late to avoid a cycle: state.py has no imports, so a direct
+# --- Playback session ---------------------------------------------------
+# Durable playback intent for aggressive session recovery. The frontend
+# saves here at every state boundary (pause, play, stop, clear, seek,
+# track change, load, queue mutation); on boot it reads this back and —
+# only when HQPlayer is not already showing the same album/track — re-issues
+# the load with play= (intent == 'playing'), then seeks and optionally plays.
+
+
+def handle_playback_session_get(handler):
+    """Return the persisted playback-intent snapshot."""
+    handler.send_response(200)
+    handler.send_header('Content-type', 'application/json')
+    handler.end_headers()
+    handler.wfile.write(json.dumps(load_session()).encode())
+
+
+def handle_playback_session_put(handler):
+    """Persist the playback-intent snapshot sent by the client.
+
+    The body is exactly the session object described in playback_session.py.
+    save_session sanitizes it, so malformed or partial payloads degrade to a
+    safe empty session rather than crashing or persisting junk.
+    """
+    data = read_json_body(handler)
+    save_session(data)
+    handler.send_response(200)
+    handler.send_header('Content-type', 'application/json')
+    handler.end_headers()
+    handler.wfile.write(b'{"status":"success"}')
 # import at the top would be fine — kept here only for documentation.
 _ = FAVORITES_PATH
 _ = state

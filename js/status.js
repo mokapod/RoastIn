@@ -195,6 +195,7 @@ async function fetchStatus() {
     lastStatus = data;
     anchorPosition(data.position, data.length);
     applyStatus(data);
+    persistObservedStatus(data);
   } catch (e) {
     markDisconnected();
   }
@@ -337,6 +338,11 @@ function applyStatus(data) {
     }
 
     if (data.error) return;
+
+    // Persist only after restorePlaybackFromServer has had a chance to
+    // resolve an initially-empty client state to the live album/track.
+    // Otherwise the first live status frame after a page restart is
+    // skipped because currentPlayback.album is still null.
 
     // In queue mode, data.track is the position in the queue, not an
     // album track index. The reconciliation block below treats it as
@@ -485,6 +491,7 @@ function applyStatus(data) {
 
       paintWaveform();
       restorePlaybackFromServer(data);
+      persistObservedStatus(data);
     }
 
     const volumeAvailable = data.volume_available !== false;

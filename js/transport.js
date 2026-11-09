@@ -126,6 +126,7 @@ async function reloadCurrentAlbum() {
     currentPlayback.offset = resumeAt;
     currentPlayback.startTime = Date.now();
     currentPlayback.isPlaying = true;
+    persistSessionIntent('playing');
 
     loadTrackIntoUI(currentPlayback.trackIndex, true);
 
@@ -326,6 +327,10 @@ async function sendCommand(action) {
       currentPlayback.offset += (Date.now() - currentPlayback.startTime) / 1000;
     }
 
+    if (action === 'stop') persistSessionIntent('stopped');
+    else if (action === 'play') persistSessionIntent('playing');
+    else if (action === 'pause') persistSessionIntent('paused');
+
     updatePlaybackUI();
     updatePlayingTrackHighlight();
   } catch (e) {
@@ -385,6 +390,7 @@ async function togglePlayPause() {
       currentPlayback.startTime = Date.now();
       verifyPlaybackStarted(currentPlayback.trackIndex + 1);
     }
+    persistSessionIntent(action === 'pause' ? 'paused' : 'playing');
     updatePlaybackUI();
     updatePlayingTrackHighlight();
   } catch (e) {
@@ -501,6 +507,7 @@ async function playTrackInHQPlayer(albumIndex, trackIndex) {
     const data = await res.json().catch(() => ({}));
     playbackMode = data.mode || 'album';
     sessionStorage.setItem('hqp.playbackMode', playbackMode);
+    persistSessionIntent('playing');
 
     fetchStatus();
     verifyPlaybackStarted(startTrackNumber);
@@ -542,6 +549,8 @@ async function addToQueue(albumIndex, trackIndex) {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
+      await refreshSessionQueue();
+      persistSessionIntent(currentPlayback.isPlaying ? 'playing' : 'paused');
       showNotification(`Added ${countLabel} to queue`);
       return;
     }
@@ -591,6 +600,9 @@ async function addToQueue(albumIndex, trackIndex) {
       playbackMode = 'queue';
       sessionStorage.setItem('hqp.playbackMode', 'queue');
 
+      await refreshSessionQueue();
+      persistSessionIntent(currentPlayback.isPlaying ? 'playing' : 'paused');
+
       showNotification(`Added ${countLabel} to queue`);
       return;
     }
@@ -622,6 +634,7 @@ async function addToQueue(albumIndex, trackIndex) {
     loadTrackIntoUI(trackIndex ?? 0);
     updatePlaybackUI();
     updatePlayingTrackHighlight();
+    persistSessionIntent('playing');
 
     loadGracePeriodUntil = Date.now() + LOAD_GRACE_MS;
     verifyPlaybackStarted(1);

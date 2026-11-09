@@ -44,6 +44,7 @@ async function handleProgressChange(e) {
   currentPlayback.startTime = Date.now();
   anchorPosition(seekTime, duration);
   lastSeekTime = Date.now();
+  persistSessionIntent(currentPlayback.isPlaying ? 'playing' : 'paused');
 
   $progress.value = percent;
   setTimeDisplay($pbTimeCurMin, $pbTimeCurSec, seekTime);

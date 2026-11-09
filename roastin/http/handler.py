@@ -281,6 +281,10 @@ class Handler(SimpleHTTPRequestHandler):
             self._send_json(status, swallow_disconnect=True)
             return True
 
+        if path == '/api/playback-session':
+            actions.handle_playback_session_get(self)
+            return True
+
         if path == '/api/favorites':
             from ..library.favorites import load_favorites
             self._send_json({'albums': sorted(load_favorites())},
@@ -577,6 +581,11 @@ class Handler(SimpleHTTPRequestHandler):
 
         elif action == 'mute':
             send_xml_command('<VolumeMute/>')
+
+        # ---- Session ------------------------------------------------------
+        elif action == 'playback-session':
+            actions.handle_playback_session_put(self)
+            return True
 
         # ---- Queue ------------------------------------------------------
         elif action == 'load':

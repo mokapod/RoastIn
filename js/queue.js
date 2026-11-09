@@ -928,6 +928,7 @@ async function performQueueReorder(from, to) {
     // producing a visible flicker.
     const tracks = await syncQueueFromServer();
     if (tracks) lastKnownQueue = tracks;
+    persistSessionIntent(currentPlayback.isPlaying ? 'playing' : 'paused');
 
     // Force the next status poll's restore to re-derive the playback
     // bar. The reorder changed which item occupies the playing position
@@ -1068,6 +1069,7 @@ async function removeFromQueue(index) {
     if (lastKnownQueue.length >= index) {
       lastKnownQueue.splice(index - 1, 1);
     }
+    persistSessionIntent(currentPlayback.isPlaying ? 'playing' : 'paused');
 
     // If that was the last row, swap in the empty state. The wrapper
     // is deliberately absent — renderQueueFromTracks writes the empty
@@ -1118,6 +1120,8 @@ async function clearQueue() {
     // against a queue that no longer exists.
     lastKnownQueue = [];
     queueHasRendered = false;
+
+    persistSessionIntent('empty');
 
     // Render the empty state directly rather than refetching, which
     // would hit the same stale server state that clearGracePeriodUntil

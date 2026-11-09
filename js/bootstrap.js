@@ -37,6 +37,7 @@ async function loadLibrary() {
     libraryDirectories = xmlDoc.querySelectorAll('directory');
     masterAlbums = groupAlbums(libraryDirectories);
     applyFiltersAndRender();
+    return true;
   } catch (error) {
     console.error('Library load failed:', error);
 
@@ -54,6 +55,7 @@ async function loadLibrary() {
                settings folder and that the ${APP_NAME} server is running.`}
         </p>
       </div>`;
+    return false;
   }
 }
 
@@ -70,7 +72,6 @@ async function loadFavorites() {
 }
 
 loadFavorites();
-loadLibrary();
 
 initializeHistory();
 isDetailView = false;
@@ -128,8 +129,13 @@ document.querySelectorAll('[title]').forEach(el => {
   el.removeAttribute('title');
 });
 
-// Open the status stream. Frames push transport changes, flag changes,
-// and a position heartbeat; nothing polls. The one-shot fetchStatus()
-// remains for mutations that want an immediate refresh. Queue contents
-// are still fetched on demand when the queue view opens.
-startStatusStream();
+// The library must be present before status frames or durable recovery
+// can resolve album paths. Starting the stream after the library load
+// prevents its initial seed from reaching restorePlaybackFromServer while
+// masterAlbums is still empty. A failed library load leaves the session
+// intact; the next page load can retry recovery.
+loadLibrary().then((loaded) => {
+  if (!loaded) return;
+  startStatusStream();
+  return startSessionRecovery();
+});

@@ -74,6 +74,8 @@ HQPLAYER_SETTINGS_PATH = _os.path.join(ROOT, HQPLAYER_SETTINGS_DIR,
 FAVORITES_PATH = APP_DIR / 'favorites.json'
 SCRIPTS_DIR = APP_DIR / 'scripts'
 API_TOKEN_PATH = APP_DIR / '.api_token'
+# Session state is durable playback intent, not HQPlayer's live cache.
+PLAYBACK_SESSION_PATH = APP_DIR / '.playback_session.json'
 
 # Upper bound on any POST body. Every endpoint takes a small command
 # payload, so this guards against a hostile Content-Length rather than
